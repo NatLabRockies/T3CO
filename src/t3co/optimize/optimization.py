@@ -303,15 +303,39 @@ def build_termination(
     )
 
 
-def run_optimization(selection, parallel=True, n_processes=4):
+def run_optimization(
+    selection,
+    parallel=True,
+    n_processes=4,
+    config_file=None,
+    analysis_id=1,
+):
+    """Optimize one Vehicle-Scenario pair and report the cheapest design.
+
+    The analysis is loaded from a Config CSV rather than from ``Config()``
+    defaults. Several of those defaults are placeholders that only
+    ``from_csv`` fills in — ``fuel_prices_file`` is the empty string, for
+    instance — and ``Config.__setstate__`` re-reads the auxiliary files on
+    every unpickle. A Config built from the defaults therefore raises inside
+    each pool worker as it is unpickled; ``Pool`` silently replaces the dead
+    worker, the replacement dies the same way, and the run hangs forever
+    instead of reporting the error.
+    """
     config = Config()
+    config.from_csv(
+        filename=str(config_file or config.config_filename),
+        analysis_id=analysis_id,
+    )
     config.skip_all_opt = False
     config.selections = [selection]
+    config.check_drivecycles_and_create_selections()
+    config.read_auxiliary_files()
     vehicle = Vehicle().from_config(selection=selection, config=config)
     vehicle.set_veh_kg()
     scenario = Scenario().from_csv(
         selection=selection, scenario_file=config.scenario_file
     )
+    scenario.override_from_config(config=config)
     config.vehicle_life_yr = scenario.vehicle_life_yr
 
     pool = None
@@ -376,10 +400,21 @@ if __name__ == "__main__":
     parser.add_argument(
         "--n-processes", type=int, default=9, help="Number of processes."
     )
+    parser.add_argument(
+        "--config", default=None, help="Input Config file"
+    )
+    parser.add_argument(
+        "--analysis-id",
+        type=int,
+        default=1,
+        help="Analysis key from input Config file - 'config.analysis_id'",
+    )
     args = parser.parse_args()
 
     run_optimization(
         selection=args.selection,
         parallel=not args.no_parallel,
         n_processes=args.n_processes,
+        config_file=args.config,
+        analysis_id=args.analysis_id,
     )
