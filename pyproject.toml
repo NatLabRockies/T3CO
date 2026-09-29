@@ -1,6 +1,6 @@
 [project]
 name = "t3co"
-version = "2.0.0"
+version = "2.1.0"
 dynamic = ["dependencies"]
 description = "NLR's Transportation Technology Total Cost of Ownership tool"
 readme = "README.md"
