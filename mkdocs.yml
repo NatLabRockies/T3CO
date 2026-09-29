@@ -68,7 +68,7 @@ theme:
     
 nav:
     - Home: index.md
-    - What's New in 2.0: whats_new.md
+    - What's New: whats_new.md
     - Installation: installation.md
     - Quick Start: quick_start.md
     - Overview: T3CO_Overview.md
