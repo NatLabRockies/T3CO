@@ -1137,7 +1137,7 @@ class T3COCharts:
 
                 # Unique x positions so each scenario stays a separate stacked
                 # bar, even when the label column repeats within the subplot
-                # (otherwise barmode="stack" would merge them onto one bar).
+                # (otherwise the stacked bars would merge them onto one bar).
                 xpos = list(range(len(sub)))
                 if grouped and subplot_group_col in sub.columns:
                     ticktext = [str(v) for v in sub[subplot_group_col]]
@@ -1187,7 +1187,10 @@ class T3COCharts:
                 )
 
         fig.update_layout(
-            barmode="stack",
+            # "relative" stacks the positive costs up from zero and the negative
+            # residual below it; "stack" accumulates across signs, which would
+            # start every cost from the bottom of the residual.
+            barmode="relative",
             bargap=max(0.0, 1.0 - bar_width),
             title=dict(text="Total Cost of Ownership Breakdown", x=0.5, font=dict(size=20)),
             legend=dict(traceorder="reversed", title_text="Cost Components"),

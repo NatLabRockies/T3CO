@@ -148,6 +148,9 @@ def test_plotly_tco_bars_sum_to_tco_marker():
     fig = tc.generate_tco_plots()
     totals = sum(np.asarray(t.y, dtype=float) for t in fig.data if t.type == "bar")
     np.testing.assert_allclose(totals, tc.to_df()["discounted_tco_dol"], atol=1.0)
+    # the negative residual must stack below zero and every other cost up from
+    # zero; plotly's "stack" mode would instead start them from the residual
+    assert fig.layout.barmode == "relative"
 
 
 def test_ungrouped_tco_bars_are_separate_per_scenario(results_df):
