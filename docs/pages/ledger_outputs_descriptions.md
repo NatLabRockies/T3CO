@@ -1,10 +1,17 @@
 # Ledger Output Parameters
 
-
-**Filter Options:**
-- **Category:** <select id="ledgercategoryFilter"><option value="">All</option></select>
-- **Units:** <select id="ledgerUnitsFilter"><option value="">All</option></select>
-- **Data Type:** <select id="ledgerdatatypeFilter"><option value="">All</option></select>
+<div class="filter-container">
+    <span class="filter-label"><strong>Filter Options</strong></span>
+    <span class="filter-item"><strong>Category:</strong>
+        <select id="ledgercategoryFilter"><option value="">All</option></select>
+    </span>
+    <span class="filter-item"><strong>Units:</strong>
+        <select id="ledgerUnitsFilter"><option value="">All</option></select>
+    </span>
+    <span class="filter-item"><strong>Data Type:</strong>
+        <select id="ledgerdatatypeFilter"><option value="">All</option></select>
+    </span>
+</div>
 
 <div class="table-container">
 <table id="ledgerTable">
