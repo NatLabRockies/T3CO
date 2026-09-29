@@ -53,63 +53,25 @@ When a folder path is provided in the T3COConfig.csv file (`config.drive_cycle`)
 T3CO presents a demo file (`src/t3co/demos/demo.py`) for generating a `TCOCalc` for a specific year and a `Ledger` object for a given vehicle, scenario, and energy inputs. It showcases the modularity of the tool and allows the user to also download the results as a JSON or CSV file.
 
 ## Other Command Line Interface arguments
-Use the command below to get a list of all CLI arguments:
-```bash
-python -m t3co.cli.sweep --help
-```
+
+Run `python -m t3co.cli.sweep --help` for the full list of CLI arguments. Common ones:
+
+- `--plot [plotly|matplotlib]` — generate TCO charts after the run (see [Visualization](./pages/visualization.md)).
+- `--run-multi` / `--n-processors N` — Batch Mode multiprocessing (see above).
+- `--eia-api-key`, `--eia-aeo-year`, `--eia-aeo-case` — control EIA fuel price lookups.
 
 ### EIA Fuel Price Projections
 
-T3CO can fetch fuel price projections directly from the EIA Annual Energy Outlook (AEO) API. This replaces the static `FuelPrices.csv` data with the latest AEO projections for a region matching the provided US zipcode.
-
-**Setup:**
-1. Get a free EIA API key from [eia.gov/opendata/register.php](https://www.eia.gov/opendata/register.php)
-2. Add it to a `.env` file in your project root:
-   ```
-   T3CO_EIA_API_KEY=your_api_key_here
-   ```
-
-**Usage:** Set the `region` column in `T3COConfig.csv` to a 5-digit US zipcode. T3CO will auto-discover the latest AEO year, resolve the zipcode to a US Census division, and fetch fuel prices for that region.
-
-```bash
-python -m t3co.cli.sweep --analysis-id=5
-```
-
-The same zipcode-based resolution also works at the Scenario level — if a scenario's `region` field contains a zipcode and the config didn't already resolve one, T3CO fetches EIA data for that scenario.
-
-To override the AEO year or scenario (instead of using the latest):
-```bash
-python -m t3co.cli.sweep --analysis-id=5 --eia-aeo-year=2023 --eia-aeo-case=aeo2022ref
-```
-
-The `eia_fuel_prices` toggle in `cost_toggles.json` controls whether EIA lookups are enabled (default: `true`). If the toggle is `false` or no zipcode is provided, T3CO falls back to the static `FuelPrices.csv`.
+Instead of the static `FuelPrices.csv`, T3CO can fetch regional projections from the EIA Annual Energy Outlook (AEO) API. Set `region` to a 5-digit US zipcode in `T3COConfig.csv`, add a free [EIA API key](https://www.eia.gov/opendata/register.php) to a `.env` file (`T3CO_EIA_API_KEY=...`), and run as usual (e.g. `--analysis-id=5`). See [What's New in 2.0](./whats_new.md#eia-fuel-price-projections) for the full behavior, fallbacks, and AEO year/case overrides.
 
 ### Fuel Price Overrides
 
-For fuel-price sensitivity work, `--fuel-prices-json` accepts a JSON string or file path with `zipcode` and `fuel_prices` keys. T3CO uses the installed `zipcodes` package to resolve that ZIP code into the base fuel-price region before cloning and overriding the matching rows in `FuelPrices.csv`.
+For fuel-price sensitivity work, `--fuel-prices-json` takes a JSON string or file path with `zipcode` and `fuel_prices` keys; T3CO resolves the zipcode to a fuel-price region and overrides the matching `FuelPrices.csv` rows:
 
 ```bash
 python -m t3co.cli.sweep \
   --analysis-id=0 \
   --fuel-prices-json='{"zipcode":"80302","fuel_prices":{"diesel_dol_per_gal":{"2025":4.25}}}'
-```
-
-Selected CLI arguments related to EIA fuel price data fetching:
-
-```
-  --eia-api-key EIA_API_KEY
-                        EIA API key (prefer setting T3CO_EIA_API_KEY in .env file instead).
-  --eia-aeo-year EIA_AEO_YEAR
-                        AEO publication year to query (e.g. '2023', '2025').
-                        Default: auto-discover latest.
-  --eia-aeo-case EIA_AEO_CASE
-                        AEO scenario case ID (e.g. 'aeo2023ref').
-                        Default: auto-discover reference case.
-```
-
-For the full list of CLI arguments, run:
-```bash
-python -m t3co.cli.sweep --help
 ```
 
 ## T3CO Results
@@ -118,20 +80,11 @@ After running the analysis, T3CO stores the results .CSV file in the directory s
 The results file includes a comprehensive list of [***Ledger Outputs***](./pages/ledger_outputs_descriptions.md) that were calculated by the various ***T3CO Modules***. In addition to the T3CO outputs, all the *Vehicle* input parameters (denoted by a prefix: `input_vehicle_value_`), *Scenario* input parameters(denoted by a prefix: `scenario_`), and *Config* parameters (denoted by a prefix: `config_`) are also present in the results file. When the optional optimization module is run, the optimized vehicle parameters are also listed ((denoted by a prefix: `optimized_vehicle_value_`)) instead of NaN values for non-optimization runs.
 
 ## T3CO Visualization
-T3CO provides a demo file ([`t3co.demos.demo`](https://github.com/NatLabRockies/T3CO/tree/main/src/t3co/demos/demo.py)) for generating a `TCOCalc` for a specific year and a `Ledger` object for a given vehicle, scenario, and energy inputs. It showcases the modularity of the tool and allows the user to also download the results as a JSON or CSV file. The following visualization plots can be generated from T3CO results:
 
-- TCO Breakdown Chart
+Turn a results CSV into a TCO breakdown chart, histogram, or violin plot — as static images (matplotlib) or interactive HTML (Plotly). Generate them automatically after a run with `--plot`:
 
-<img src="https://raw.githubusercontent.com/NatLabRockies/T3CO/refs/heads/main/docs/images/tco_breakdown_sample.png" alt="tcobreakdown" width="650"/>
+```bash
+python -m t3co.cli.sweep --analysis-id=0 --plot
+```
 
-
-- Histogram Plot
-
-<img src="https://raw.githubusercontent.com/NatLabRockies/T3CO/refs/heads/main/docs/images/histogram_sample.png" alt="histogram" width="400"/>
-
-- Violin Plot
-
-<img src="https://raw.githubusercontent.com/NatLabRockies/T3CO/refs/heads/main/docs/images/violinplot_sample.png" alt="violinplot" width="400"/>
-
-
-The user can provide other input parameters specific to each visualization method to further customize the plots.
+See the [Visualization](./pages/visualization.md) page for the `T3COCharts` API, backends, and examples.

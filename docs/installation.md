@@ -45,10 +45,11 @@ T3CO is available on PyPI and as a public access GitHub repository. This gives t
 
 ### Installation 'Extras'
 
-The user can choose one of three installation options or 'extras' of T3CO based on their desired tool capabilities. 
+The user can choose from these installation options or 'extras' of T3CO based on their desired tool capabilities. Extras can be combined, e.g. `t3co[viz,fastsim]`.
 
 - T3CO as a pure cost estimation tool with exogenous inputs for energy terms (default version `t3co` - requires Python>=3.9, <=3.13)
 - T3CO integrated with FASTSim for energy simulation (`t3co[fastsim]`, requires Python>=3.9,<=3.10)
+- T3CO with plotting support for the [visualization module](./pages/visualization.md) — matplotlib, seaborn, and plotly (`t3co[viz]`, requires Python>=3.9,<=3.13)
 - T3CO for developers and quality testers that includes all capabilities (`t3co[dev]` requires Python>=3.9,<=3.10)
 
 The different 'extras' refers to different sets of dependencies that get installed along with T3CO when the user runs these commands. Dependencies don't need to be manually installed since [Poetry](https://python-poetry.org/) is used as the dependency manager.
@@ -72,6 +73,12 @@ For the FASTSim-integrated 'extra':
 
 ```bash
 pip install t3co[fastsim]
+```
+
+For the visualization 'extra' (enables `--plot` and the charts module):
+
+```bash
+pip install "t3co[viz]"
 ```
 
 For the developer 'extra':
@@ -112,6 +119,12 @@ For the FASTSim-integrated 'extra':
 
 ```bash
 pip install -e .[fastsim]
+```
+
+For the visualization 'extra':
+
+```bash
+pip install -e ".[viz]"
 ```
 
 For the developer 'extra':

@@ -79,7 +79,8 @@ nav:
       - Config: pages/config_inputs_descriptions.md
     - Outputs:
       - Ledger: pages/ledger_outputs_descriptions.md
-    - API Reference: 
+    - Visualization: pages/visualization.md
+    - API Reference:
       - Input Data Module:
         - Vehicle: pages/api/vehicle.md
         - Scenario: pages/api/scenario.md
@@ -96,6 +97,8 @@ nav:
         - Ledger: pages/api/ledger.md
       - CLI Module:
         - Sweep: pages/api/sweep.md
+      - Visualization Module:
+        - Charts: pages/api/charts.md
       - Utility Module:
         - Demo Files Installer: pages/api/demo_files_installer.md
         - Print Class Objects: pages/api/print_class_objects.md

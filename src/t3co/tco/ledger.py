@@ -51,6 +51,7 @@ class Ledger:
     total_fuel_cost_dol: float = 0.0
     total_maintenance_cost_dol: float = 0.0
     total_purchasing_cost_dol: float = 0.0
+    total_purchasing_payment_dol: float = 0.0
     insurance_cost_dol: float = 0.0
     fueling_dwell_labor_cost_dol: float = 0.0
 
@@ -226,6 +227,16 @@ class Ledger:
                         year_index
                     ].oper_costs_dol.purchasing_cost_dol_per_yr
                 ),
+                year_number=year_index + 1,
+            )
+            for year_index in range(self.vehicle_life_yr)
+        )
+        # The full loan/lease payments counted in the discounted operating cost
+        # and TCO. total_purchasing_cost_dol above is only the interest or
+        # finance-fee share of those payments.
+        self.total_purchasing_payment_dol = sum(
+            self.scenario.get_discounted_value(
+                self.tco_per_year[year_index].oper_costs_dol.purchasing_payment_dol_per_yr,
                 year_number=year_index + 1,
             )
             for year_index in range(self.vehicle_life_yr)
