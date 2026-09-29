@@ -57,6 +57,13 @@
             <td>string</td>
         </tr>
         <tr>
+            <td>summary_group_by</td>
+            <td>Results Summary Grouping</td>
+            <td></td>
+            <td>Optional result columns to group by, e.g. vehicle_veh_pt_type; scenario_vehicle_class. When set, the sweep also writes summary_&lt;results file&gt;.csv next to the results with run counts, medians and VMT-weighted means per group. Leave blank to skip.</td>
+            <td>string or list</td>
+        </tr>
+        <tr>
             <td>selections</td>
             <td>Selections List</td>
             <td></td>

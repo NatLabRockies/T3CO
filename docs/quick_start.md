@@ -124,6 +124,11 @@ t3co_summarize --results-dir results/ --out results/summary.csv
 ```
 Use `--group-by` to group by other result columns (e.g. `scenario_vehicle_class`), `--metrics` to choose ledger columns, and `--stats` to choose between `median` and `weighted_mean`. The same functions are available from Python through `t3co.tco.summary.load_results` and `summarize_results`.
 
+To get a summary written automatically, set `summary_group_by` in the Config file (e.g. `scenario_model_year; vehicle_veh_pt_type`) or pass `--summary-group-by` to the sweep. The sweep then writes `summary_<results file>.csv` next to the results:
+```bash
+python -m t3co.cli.sweep --config T3COConfig.csv --analysis-id 0 --summary-group-by scenario_model_year vehicle_veh_pt_type
+```
+
 ## T3CO Visualization
 T3CO provides a demo file ([`t3co.demos.demo`](https://github.com/NatLabRockies/T3CO/tree/main/src/t3co/demos/demo.py)) for generating a `TCOCalc` for a specific year and a `Ledger` object for a given vehicle, scenario, and energy inputs. It showcases the modularity of the tool and allows the user to also download the results as a JSON or CSV file. The following visualization plots can be generated from T3CO results:
 
