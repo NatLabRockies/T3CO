@@ -49,6 +49,7 @@ dev = ["pytest", "pytest-mock", "fastsim>=2.1.1,<3; python_version < '3.11'", "r
 
 [project.scripts]
 install_t3co_demo_inputs = "t3co.utils.demo_inputs_installer:main"
+t3co_summarize = "t3co.tco.summary:main"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
