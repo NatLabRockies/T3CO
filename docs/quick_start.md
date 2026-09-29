@@ -117,6 +117,13 @@ After running the analysis, T3CO stores the results .CSV file in the directory s
 
 The results file includes a comprehensive list of [***Ledger Outputs***](./pages/ledger_outputs_descriptions.md) that were calculated by the various ***T3CO Modules***. In addition to the T3CO outputs, all the *Vehicle* input parameters (denoted by a prefix: `input_vehicle_value_`), *Scenario* input parameters(denoted by a prefix: `scenario_`), and *Config* parameters (denoted by a prefix: `config_`) are also present in the results file. When the optional optimization module is run, the optimized vehicle parameters are also listed ((denoted by a prefix: `optimized_vehicle_value_`)) instead of NaN values for non-optimization runs.
 
+### Summarizing Results
+To compare scenarios across several runs, `t3co_summarize` (or `python -m t3co.tco.summary`) collects the newest `results_<timestamp>_<suffix>.csv` for each result suffix in a directory. It reports the number of runs, the median, and the VMT-weighted mean of the key ledger outputs, plus the TCO per mile for each group:
+```bash
+t3co_summarize --results-dir results/ --out results/summary.csv
+```
+Use `--group-by` to group by other result columns (e.g. `scenario_vehicle_class`), `--metrics` to choose ledger columns, and `--stats` to choose between `median` and `weighted_mean`. The same functions are available from Python through `t3co.tco.summary.load_results` and `summarize_results`.
+
 ## T3CO Visualization
 T3CO provides a demo file ([`t3co.demos.demo`](https://github.com/NatLabRockies/T3CO/tree/main/src/t3co/demos/demo.py)) for generating a `TCOCalc` for a specific year and a `Ledger` object for a given vehicle, scenario, and energy inputs. It showcases the modularity of the tool and allows the user to also download the results as a JSON or CSV file. The following visualization plots can be generated from T3CO results:
 
