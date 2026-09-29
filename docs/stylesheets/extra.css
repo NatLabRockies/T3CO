@@ -1,72 +1,159 @@
-/* Ensure tables fit within 1600px */
-.table-container {
-  width: 110%;
-  max-width: 2100px;
-  margin: auto;
-  overflow-x: hidden; /* Prevent horizontal scrolling */
+/* ---------------------------------------------------------------------------
+   Layout for the input/output parameter tables
+   --------------------------------------------------------------------------- */
+
+/* Give the table pages the full window width. Material otherwise caps the
+   content column at 61rem, which is comfortable for prose but far too narrow
+   for a seven-column reference table. Scoped with :has() so ordinary pages keep
+   their normal measure; browsers without :has() simply fall back to scrolling
+   the table box below. */
+body:has(.table-container) .md-grid {
+  max-width: 100%;
 }
 
-/* Ensure tables fit fully within the page */
+/* The table scrolls inside this box rather than overflowing the page. Capping
+   the height keeps the horizontal scrollbar directly beneath the visible rows -
+   previously it belonged to the page body, so reaching it meant scrolling past
+   every row in the table. */
+.table-container {
+  width: 100%;
+  max-width: 100%;
+  max-height: 75vh;
+  overflow: auto;
+}
+
+/* Material wraps every table in its own .md-typeset__scrollwrap, which scrolls
+   horizontally but is as tall as the whole table - so its scrollbar sits below the
+   last row, which is what made the tables look cut off with no way to scroll short
+   of jumping to the bottom of the page. Neutralise it and let .table-container be
+   the only scroller. */
+.table-container .md-typeset__scrollwrap {
+  margin: 0;
+  overflow: visible;
+}
+
+.table-container .md-typeset__table {
+  display: block;
+  padding: 0;
+  overflow: visible;
+}
+
+.table-container .md-typeset__table table {
+  display: table;
+  margin: 0;
+}
+
 #vehicleTable, #scenarioTable, #ledgerTable, #configTable {
   width: 100%;
-  max-width: 2100px;
   border-collapse: collapse;
-  table-layout: fixed; /* Ensures columns adjust to available space */
+  table-layout: fixed; /* Column widths below are honoured exactly */
+  /* Material sets overflow:hidden on tables, which would make the table itself the
+     sticky headers' scroll container and stop them sticking to .table-container. */
+  overflow: visible;
 }
 
-/* Column styling with min/max width */
 #vehicleTable th, #vehicleTable td, #scenarioTable th, #scenarioTable td, #ledgerTable th, #ledgerTable td, #configTable th, #configTable td {
-  border: 1px solid #ddd;
+  border: 1px solid var(--md-default-fg-color--lightest);
   padding: 10px;
   text-align: left;
   vertical-align: top;
   white-space: normal; /* Allows text wrapping */
   word-wrap: break-word;
-  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
-/* Adjust column widths to ensure everything fits */
-#vehicleTable th:nth-child(1), #scenarioTable th:nth-child(1), #ledgerTable th:nth-child(1), #configTable th:nth-child(1) { width: 18%; } /* Input Parameter */
-#vehicleTable th:nth-child(2), #scenarioTable th:nth-child(2), #ledgerTable th:nth-child(3), #configTable th:nth-child(2) { width: 22%; } /* Full Form */
-#vehicleTable th:nth-child(3), #scenarioTable th:nth-child(3), #ledgerTable th:nth-child(4), #configTable th:nth-child(3) { width: 10%; } /* Units */
-#vehicleTable th:nth-child(4), #scenarioTable th:nth-child(4), #ledgerTable th:nth-child(5), #configTable th:nth-child(4) { width: 30%; } /* Description */
-#vehicleTable th:nth-child(5), #scenarioTable th:nth-child(5) { width: 10%; } /* Powertrain */
-#vehicleTable th:nth-child(6), #scenarioTable th:nth-child(6), #ledgerTable th:nth-child(6), #configTable th:nth-child(5) { width: 10%; } /* Data Type */
-#scenarioTable th:nth-child(7) { width: 10%; } /* T3CO Component */
-#ledgerTable th:nth-child(2) { width: 15%; } /* T3CO Component */
+/* Column widths. Each table's percentages must add up to exactly 100% - when
+   they summed to more (scenario was 110%, ledger 105%) the table overflowed its
+   container and was cut off at the right edge. */
 
-/* Sticky headers to keep column titles visible */
+/* Vehicle: Parameter | Full Form | Units | Description | Powertrain | Data Type */
+#vehicleTable th:nth-child(1) { width: 18%; }
+#vehicleTable th:nth-child(2) { width: 22%; }
+#vehicleTable th:nth-child(3) { width: 10%; }
+#vehicleTable th:nth-child(4) { width: 30%; }
+#vehicleTable th:nth-child(5) { width: 10%; }
+#vehicleTable th:nth-child(6) { width: 10%; }
+
+/* Scenario: Parameter | Full Form | Units | Description | Powertrains | T3CO Component | Data Type */
+#scenarioTable th:nth-child(1) { width: 16%; }
+#scenarioTable th:nth-child(2) { width: 20%; }
+#scenarioTable th:nth-child(3) { width: 8%; }
+#scenarioTable th:nth-child(4) { width: 26%; }
+#scenarioTable th:nth-child(5) { width: 10%; }
+#scenarioTable th:nth-child(6) { width: 12%; }
+#scenarioTable th:nth-child(7) { width: 8%; }
+
+/* Ledger: Parameter | Category | Full Form | Units | Description | Data Type */
+#ledgerTable th:nth-child(1) { width: 18%; }
+#ledgerTable th:nth-child(2) { width: 12%; }
+#ledgerTable th:nth-child(3) { width: 18%; }
+#ledgerTable th:nth-child(4) { width: 8%; }
+#ledgerTable th:nth-child(5) { width: 34%; }
+#ledgerTable th:nth-child(6) { width: 10%; }
+
+/* Config: Parameter | Full Form | Units | Description | Data Type */
+#configTable th:nth-child(1) { width: 20%; }
+#configTable th:nth-child(2) { width: 24%; }
+#configTable th:nth-child(3) { width: 10%; }
+#configTable th:nth-child(4) { width: 34%; }
+#configTable th:nth-child(5) { width: 12%; }
+
+/* Sticky headers - relative to .table-container, so they stay put while rows scroll */
 #vehicleTable th, #scenarioTable th, #ledgerTable th, #configTable th {
-  background-color: #f4f4f4;
+  background-color: var(--md-default-bg-color);
+  box-shadow: inset 0 -1px 0 var(--md-default-fg-color--lightest);
   cursor: pointer;
   position: sticky;
   top: 0;
+  z-index: 2;
 }
 
-/* Ensure proper text wrapping */
-#vehicleTable td:nth-child(4), #scenarioTable td:nth-child(4), #ledgerTable td:nth-child(4), #configTable td:nth-child(4) {
-  word-wrap: break-word;
-  white-space: normal;
-}
-
-/* Center content and ensure proper page width */
-.md-content {
-  max-width: 2100px;
-}
-
-/* Hover effect for better readability */
 #vehicleTable tr:hover, #scenarioTable tr:hover, #ledgerTable tr:hover, #configTable tr:hover {
-  background-color: #f9f9f9;
+  background-color: var(--md-default-fg-color--lightest);
 }
 
-/* Button container styling */
+/* DataTables' search box is moved above .table-container by datatables.js so it
+   does not scroll away with the rows. */
+.dataTables_filter {
+  float: right;
+  margin-bottom: .4rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Filter controls
+   --------------------------------------------------------------------------- */
+
+.filter-container {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .3rem 1rem;
+  margin-bottom: .6rem;
+}
+
+/* Each label travels with its control, so the row wraps between filters rather
+   than stranding a label on one line and its dropdown on the next. */
+.filter-item {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  white-space: nowrap;
+}
+
+.filter-item select {
+  max-width: 14rem;
+}
+
+.filter-label {
+  white-space: nowrap;
+}
+
 .button-container {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 10px;
+  flex-grow: 1;
 }
 
-/* Button styling */
 #downloadTemplateBtn {
   background-color: #3F51B5; /* MkDocs Material indigo color */
   color: white;
@@ -82,44 +169,65 @@
   background-color: #303F9F; /* Darker shade for hover effect */
 }
 
-/* Styling for t3coComponentFilter dropdown */
-#t3coComponentFilter {
-  width: 200px;
-  height: auto;
-  font-size: 14px;
-  background-color: #f0f0f0;
-  border: 1px solid #ccc;
+/* ---------------------------------------------------------------------------
+   Multi-select rendered as a collapsed checkbox dropdown (see datatables.js).
+   Without JavaScript the native <select multiple> is shown instead.
+   --------------------------------------------------------------------------- */
+
+.ms-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.ms-dropdown__native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.ms-dropdown__toggle {
+  min-width: 11rem;
+  padding: .3rem .6rem;
+  font-size: .75rem;
+  text-align: left;
+  cursor: pointer;
+  color: var(--md-default-fg-color);
+  background-color: var(--md-default-bg-color);
+  border: 1px solid var(--md-default-fg-color--light);
   border-radius: 4px;
-  padding: 5px;
-  z-index: 1;
-  overflow-y: auto; /* Add scroll if there are many options */
-  max-height: 150px; /* Adjust as needed */
 }
 
-#t3coComponentFilter option {
-  padding: 5px;
+.ms-dropdown__toggle::after {
+  content: " ▾";
+  float: right;
 }
 
-.filter-container {
-  display: flex;
-  align-items: center;
-  margin-bottom: 0px;
+.ms-dropdown__panel {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  z-index: 10;
+  min-width: 100%;
+  max-height: 16rem;
+  overflow-y: auto;
+  padding: .3rem;
+  background-color: var(--md-default-bg-color);
+  border: 1px solid var(--md-default-fg-color--light);
+  border-radius: 4px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .2);
 }
 
-.filter-container span {
-  margin-right: 10px;
+.ms-dropdown__option {
+  display: block;
+  padding: .2rem .3rem;
+  font-size: .75rem;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
-#unitsFilter, #powertrainFilter, #datatypeFilter {
-  margin-right: 20px; /* Add space after each dropdown */
-}
-
-#configUnitsFilter, #configdatatypeFilter {
-  margin-right: 20px; /* Add space after each dropdown */
-}
-
-.button-container {
-  display: flex;
-  justify-content: flex-end;
-  flex-grow: 1;
+.ms-dropdown__option:hover {
+  background-color: var(--md-default-fg-color--lightest);
 }
