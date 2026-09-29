@@ -62,7 +62,13 @@ def _normalize_drive_cycle_arg(drive_cycle):
 
 
 def _argument_was_provided(argv: list[str], *flags: str) -> bool:
-    return any(flag in argv for flag in flags)
+    # Match both the space form (``--flag value``) and the equals form
+    # (``--flag=value``); the latter is a single argv token.
+    return any(
+        token == flag or token.startswith(f"{flag}=")
+        for token in argv
+        for flag in flags
+    )
 
 
 def apply_cli_overrides(config: Config, args, argv: list[str] | None = None) -> Config:
@@ -302,10 +308,14 @@ def create_results_filepath(config: Config) -> Path:
             .replace(",", "-")
         )
         result_filename = f"results_{ts}_sel_{selections_string[:20]}.csv".strip("_")
-    output_path = get_path_object(config.dst_dir) / result_filename
+    # Create an absolute output directory up front: get_path_object resolves
+    # absolute paths strictly (they must exist), while a relative dst_dir is
+    # joined onto the resources folder and created below.
+    if Path(config.dst_dir).is_absolute():
+        Path(config.dst_dir).mkdir(parents=True, exist_ok=True)
 
-    if not output_path.exists():
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path = get_path_object(config.dst_dir) / result_filename
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     return output_path
 
@@ -513,13 +523,120 @@ def export_results_to_csv(
     )
 
 
-def run_t3co(config: Config, save_results: bool = True) -> None:
+DEFAULT_PLOT_BACKEND = "plotly"
+
+
+def save_default_plots(
+    results_csv: Union[str, Path],
+    backend: str = DEFAULT_PLOT_BACKEND,
+) -> List[Path]:
+    """
+    Generates and saves a default set of TCO charts from a results CSV.
+
+    Writes figures next to the results file: a TCO cost breakdown, a histogram of
+    the discounted TCO, and - when a fuel-type grouping is available - a violin
+    plot. With the Plotly backend all charts are combined into a single
+    self-contained HTML report; with matplotlib each chart is a separate PNG.
+
+    The plotting dependencies are optional; if they are missing (or charting
+    fails) the run is unaffected and a note is printed.
+
+    Args:
+        results_csv (Union[str, Path]): Path to the T3CO results CSV.
+        backend (str): "plotly" (interactive HTML) or "matplotlib" (static PNG).
+
+    Returns:
+        List[Path]: Paths of the saved figure files (empty if plotting was skipped).
+    """
+    try:
+        from t3co.visualize.charts import T3COCharts
+    except ImportError as e:
+        print(f"Skipping --plot: {e}")
+        return []
+
+    results_csv = Path(results_csv)
+    try:
+        tc = T3COCharts(filename=results_csv, backend=backend)
+    except Exception as e:
+        print(f"Skipping --plot: could not initialize charts ({type(e).__name__}: {e})")
+        return []
+
+    out_dir = results_csv.parent
+    stem = results_csv.stem
+
+    group_col = "vehicle_fuel_type" if "vehicle_fuel_type" in tc.group_columns else "None"
+
+    figure_specs = {}
+    if tc.backend == "plotly":
+        # Interactive HTML fragments with their own dropdowns.
+        figure_specs["explorer"] = lambda: tc.interactive_explorer_html()
+        # TCO breakdown with a client-side "Group by" dropdown that facets the
+        # scenarios into subplots.
+        figure_specs["tco_breakdown"] = lambda: tc.grouped_tco_html()
+        figure_specs["tco_histogram"] = lambda: tc.interactive_histogram_html(n_bins=10)
+        if group_col != "None":
+            figure_specs["tco_violin"] = lambda: tc.interactive_violin_html(
+                default_x=group_col, default_y="discounted_tco_dol"
+            )
+    else:
+        # One separate stacked bar per scenario (ungrouped); pass grouping
+        # columns explicitly to arrange the bars into subplots instead.
+        figure_specs["tco_breakdown"] = lambda: tc.generate_tco_plots()
+        figure_specs["tco_histogram"] = lambda: tc.generate_histogram(
+            hist_col="discounted_tco_dol", n_bins=10
+        )
+        if group_col != "None":
+            figure_specs["tco_violin"] = lambda: tc.generate_violin_plot(
+                x_group_col=group_col, y_group_col="discounted_tco_dol"
+            )
+
+    # Generate the figures, skipping any individual chart that fails.
+    figures = {}
+    for name, make_fig in figure_specs.items():
+        try:
+            figures[name] = make_fig()
+        except Exception as e:
+            print(f"  could not generate '{name}' plot ({type(e).__name__}: {e})")
+    if not figures:
+        return []
+
+    # Writing is best-effort too: a full disk or read-only folder must not fail
+    # a sweep whose results CSV has already been saved.
+    saved = []
+    if tc.backend == "plotly":
+        # Combine all charts into a single self-contained HTML report.
+        out = out_dir / f"{stem}_charts.html"
+        try:
+            T3COCharts.write_html_report(list(figures.values()), out)
+        except Exception as e:
+            print(f"  could not write the plot report {out} ({type(e).__name__}: {e})")
+            return []
+        saved.append(out)
+        print(f"Saved plots: {out}")
+    else:
+        for name, fig in figures.items():
+            out = out_dir / f"{stem}_{name}.png"
+            try:
+                fig.savefig(out, bbox_inches="tight", dpi=120)
+            except Exception as e:
+                print(f"  could not write '{name}' plot to {out} ({type(e).__name__}: {e})")
+                continue
+            saved.append(out)
+            print(f"Saved plot: {out}")
+    return saved
+
+
+def run_t3co(
+    config: Config, save_results: bool = True, plot_backend: str = None
+) -> None:
     """
     Runs the T3CO analysis.
 
     Args:
         config (Config): The configuration instance.
         save_results (bool, optional): Whether to save the results. Defaults to True.
+        plot_backend (str, optional): If set ("plotly" or "matplotlib"), generates and
+            saves default TCO charts next to the results CSV. Defaults to None.
     """
     reports_list = []
     error_list = []
@@ -541,6 +658,8 @@ def run_t3co(config: Config, save_results: bool = True) -> None:
         if len(error_list):
             print(f"Selections {error_list} were skipped due to assumptions errors.")
         print(f"T3CO results saved to: {output_path}")
+        if plot_backend and output_path:
+            save_default_plots(output_path, backend=plot_backend)
 
 
 if __name__ == "__main__":
@@ -780,6 +899,16 @@ if __name__ == "__main__":
         type=str,
         help="AEO scenario case ID (e.g. 'aeo2023ref'). Default: auto-discover reference case.",
     )
+    parser.add_argument(
+        "--plot",
+        nargs="?",
+        const=DEFAULT_PLOT_BACKEND,
+        default=None,
+        choices=["plotly", "matplotlib", "seaborn"],
+        help="Generate TCO charts from the results after the run, saved next to the results CSV. "
+        "Use '--plot' for interactive Plotly HTML (default) or '--plot matplotlib' for static PNGs. "
+        "Requires the 'viz' extra: pip install 't3co[viz]'.",
+    )
 
     args = parser.parse_args()
 
@@ -869,7 +998,10 @@ if __name__ == "__main__":
             sort_csv_file(input_path=result_filepath, sort_by="selection")
             print(f"T3CO results saved and sorted to: {result_filepath}")
 
+        if args.plot:
+            save_default_plots(result_filepath, backend=args.plot)
+
     else:
-        run_t3co(config=config, save_results=True)
+        run_t3co(config=config, save_results=True, plot_backend=args.plot)
 
     print(f"T3CO Run time: {time.time() - start}")

@@ -34,5 +34,6 @@ t3co/resources/T3CO_Config_Local.csv
 /tco_results
 /src/t3co/resources/auxiliary/payload_pdf.csv
 /src/results
+/results
 /src/t3co/resources/results
 !/src/t3co/resources/cost_toggles.json

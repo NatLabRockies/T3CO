@@ -182,6 +182,33 @@ def test_set_discounted_tco(vehicle, scenario, energy, config, ledger):
     )
 
 
+@pytest.mark.parametrize("method", ["cash", "loan", "lease"])
+def test_purchasing_payments_reconcile_operating_cost(
+    vehicle, scenario, energy, config, method
+):
+    scenario.purchasing_method = method
+    scenario.purchasing_down_payment_pct = 0.15
+    scenario.purchasing_interest_apr_pct_per_yr = 0.1
+    scenario.purchasing_payment_frequency_months = 1
+    scenario.purchasing_term_yr = 4
+    scenario.leasing_money_factor = 0.002
+    ledger = Ledger(vehicle=vehicle, scenario=scenario, energy=energy, config=config)
+
+    if method == "cash":
+        assert ledger.total_purchasing_payment_dol == 0
+    else:
+        assert ledger.total_purchasing_payment_dol > 0
+    # With the full payments included, the exported discounted operating
+    # components add up to the operating total counted in TCO.
+    assert ledger.discounted_total_oper_cost_dol == pytest.approx(
+        ledger.total_fuel_cost_dol
+        + ledger.total_maintenance_cost_dol
+        + ledger.insurance_cost_dol
+        + ledger.fueling_dwell_labor_cost_dol
+        + ledger.total_purchasing_payment_dol
+    )
+
+
 def test_set_cost_components(vehicle, scenario, energy, config, ledger):
     # ledger = Ledger.__new__(vehicle=vehicle, scenario=scenario, energy=energy, config=config)
     ledger.set_cost_components()

@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 from t3co.cli.sweep import (
+    _argument_was_provided,
     _build_optimization_algorithm,
     _build_optimization_termination,
     apply_cli_overrides,
@@ -150,6 +151,41 @@ def test_create_results_filepath(config):
     result_filepath = create_results_filepath(config=config)
     assert result_filepath.name.startswith("results_")
     assert result_filepath.name.endswith("_test_suffix.csv")
+
+
+def test_argument_was_provided_handles_space_and_equals_forms():
+    assert _argument_was_provided(["--dst-dir", "/x"], "--dst-dir") is True  # space form
+    assert _argument_was_provided(["--dst-dir=/x"], "--dst-dir") is True  # equals form
+    assert _argument_was_provided(["--algos", "NSGA2"], "--algorithms", "--algos") is True
+    assert _argument_was_provided(["--algos=NSGA2"], "--algorithms", "--algos") is True
+    assert _argument_was_provided(["--something-else"], "--dst-dir") is False
+
+
+def test_apply_cli_overrides_accepts_equals_form(config):
+    args = SimpleNamespace(
+        vehicles=None, scenarios=None, eng_curves=None, lw_curves=None,
+        aero_curves=None, dst_dir="/tmp/out", algorithms=None, x_tol=None, f_tol=None,
+        n_max_gen=5, pop_size=5, nth_gen=None, n_last=None, selections=[[42]],
+        drive_cycle=None, skip_all_opt=True,
+    )
+    # equals-form argv tokens (a single string each), as argparse leaves them in sys.argv
+    apply_cli_overrides(
+        config=config,
+        args=args,
+        argv=["--dst-dir=/tmp/out", "--selections=[42]", "--skopt"],
+    )
+    assert config.dst_dir == "/tmp/out"
+    assert config.selections == [42]
+    assert config.skip_all_opt is True
+
+
+def test_create_results_filepath_creates_absolute_dst_dir(config, tmp_path):
+    dst = tmp_path / "new" / "out"  # absolute path that does not exist yet
+    config.dst_dir = str(dst)
+    result_filepath = create_results_filepath(config=config)
+    assert dst.exists()  # the output directory is created up front
+    assert result_filepath.parent == dst.resolve()
+    assert result_filepath.name.startswith("results_")
 
 
 def test_export_results_to_csv(config):
