@@ -83,6 +83,8 @@ def load_results(
         paths = [source] if isinstance(source, (str, Path)) else source
         files = {}
         for path in map(Path, paths):
+            if not path.is_file():
+                raise FileNotFoundError(f"T3CO result path not found: {path}")
             m = RESULT_FILE_RE.match(path.name)
             files[(m["suffix"] or "") if m else path.stem] = path
 

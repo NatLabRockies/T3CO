@@ -72,6 +72,11 @@ def test_load_results_empty_dir_raises(tmp_path):
         load_results(tmp_path)
 
 
+def test_load_results_missing_path_raises(tmp_path):
+    with pytest.raises(FileNotFoundError, match="not found"):
+        load_results(tmp_path / "missing")
+
+
 def test_compute_weights():
     assert compute_weights(pd.Series([1.0, 3.0])).tolist() == [0.25, 0.75]
     assert compute_weights(pd.Series([-1.0, 2.0])).tolist() == [0.0, 1.0]
