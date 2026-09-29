@@ -196,6 +196,57 @@ def summarize_results(
     return pd.DataFrame(records)
 
 
+def parse_group_by(value) -> Optional[List[str]]:
+    """
+    Parses a group-by setting, e.g. from the Config summary_group_by field.
+    Accepts a list, a list literal ("['a', 'b']") or a comma/semicolon-separated
+    string ("a; b"). Blank, None and NaN mean no summary.
+
+    Args:
+        value: Group-by setting.
+
+    Returns:
+        Optional[List[str]]: Column names, or None if no grouping is set.
+    """
+    if value is None or (isinstance(value, float) and np.isnan(value)):
+        return None
+    if isinstance(value, str):
+        text = value.strip().strip("[]")
+        value = [c.strip().strip("'\"") for c in re.split(r"[,;]", text)]
+    cols = [str(c) for c in value if str(c).strip()]
+    return cols or None
+
+
+def write_results_summary(
+    results_path: Union[str, Path],
+    group_cols: Sequence[str],
+    out_path: Optional[Union[str, Path]] = None,
+    **summary_kwargs,
+) -> Path:
+    """
+    Summarizes a single T3CO results file and writes the summary CSV next to it
+    as summary_<results file name> unless out_path is given.
+
+    Args:
+        results_path (Union[str, Path]): T3CO results CSV.
+        group_cols (Sequence[str]): Columns to group by.
+        out_path (Optional[Union[str, Path]], optional): Summary CSV path. Defaults to None.
+        **summary_kwargs: Passed to summarize_results (metrics, weight_col, stats).
+
+    Returns:
+        Path: Path of the written summary CSV.
+    """
+    results_path = Path(results_path)
+    out_path = (
+        Path(out_path) if out_path else results_path.with_name(f"summary_{results_path.name}")
+    )
+    summary = summarize_results(
+        pd.read_csv(results_path), group_cols=group_cols, **summary_kwargs
+    )
+    summary.to_csv(out_path, index=False)
+    return out_path
+
+
 def _dollars_per_mile(group: pd.DataFrame, weight_col: str) -> float:
     w = compute_weights(group[weight_col])
     dollars = (pd.to_numeric(group["discounted_tco_dol"], errors="coerce") * w).sum()
