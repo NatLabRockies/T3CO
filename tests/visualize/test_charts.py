@@ -265,6 +265,47 @@ def test_save_default_plots_cli_hook(tmp_path, results_df):
     assert html.count('class="plotly-graph-div"') >= 4
 
 
+def test_save_default_plots_report_write_failure_is_nonfatal(tmp_path, results_df, monkeypatch):
+    pytest.importorskip("plotly.graph_objects")
+    from t3co.cli.sweep import save_default_plots
+
+    csv = tmp_path / "results.csv"
+    results_df.to_csv(csv, index=False)
+
+    def fail(*args, **kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(T3COCharts, "write_html_report", staticmethod(fail))
+    # the sweep's results are already saved, so a failed report write returns
+    # no plots instead of raising
+    assert save_default_plots(csv, backend="plotly") == []
+
+
+def test_save_default_plots_png_failure_skips_only_that_plot(tmp_path, results_df, monkeypatch):
+    mpl = pytest.importorskip("matplotlib")
+    mpl.use("Agg")
+    from matplotlib.figure import Figure
+
+    from t3co.cli.sweep import save_default_plots
+
+    csv = tmp_path / "results.csv"
+    results_df.to_csv(csv, index=False)
+    real_savefig = Figure.savefig
+    attempts = {"n": 0}
+
+    def flaky_savefig(self, *args, **kwargs):
+        attempts["n"] += 1
+        if attempts["n"] == 1:
+            raise OSError("disk full")
+        return real_savefig(self, *args, **kwargs)
+
+    monkeypatch.setattr(Figure, "savefig", flaky_savefig)
+    saved = save_default_plots(csv, backend="matplotlib")
+    # the first write failed, but every remaining chart was still written
+    assert len(saved) == attempts["n"] - 1 >= 1
+    assert all(path.exists() for path in saved)
+
+
 def test_write_html_report_combines_plots(tmp_path, results_df):
     pytest.importorskip("plotly.graph_objects")
     tc = T3COCharts(results_df=results_df, backend="plotly")

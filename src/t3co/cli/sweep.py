@@ -600,17 +600,27 @@ def save_default_plots(
     if not figures:
         return []
 
+    # Writing is best-effort too: a full disk or read-only folder must not fail
+    # a sweep whose results CSV has already been saved.
     saved = []
     if tc.backend == "plotly":
         # Combine all charts into a single self-contained HTML report.
         out = out_dir / f"{stem}_charts.html"
-        T3COCharts.write_html_report(list(figures.values()), out)
+        try:
+            T3COCharts.write_html_report(list(figures.values()), out)
+        except Exception as e:
+            print(f"  could not write the plot report {out} ({type(e).__name__}: {e})")
+            return []
         saved.append(out)
         print(f"Saved plots: {out}")
     else:
         for name, fig in figures.items():
             out = out_dir / f"{stem}_{name}.png"
-            fig.savefig(out, bbox_inches="tight", dpi=120)
+            try:
+                fig.savefig(out, bbox_inches="tight", dpi=120)
+            except Exception as e:
+                print(f"  could not write '{name}' plot to {out} ({type(e).__name__}: {e})")
+                continue
             saved.append(out)
             print(f"Saved plot: {out}")
     return saved
