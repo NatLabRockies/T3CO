@@ -1,9 +1,11 @@
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from t3co.utils.print_class_objects import (
     custom_default,
+    get_path_object,
     handle_nan,
     obj_to_string,
     remove_df_attrs,
@@ -183,3 +185,10 @@ def test_remove_df_attrs():
     assert not hasattr(obj, "df")
     assert hasattr(obj, "value")
     assert obj.value == 10
+
+
+def test_get_path_object_strict(tmp_path):
+    missing = tmp_path / "missing"
+    with pytest.raises(FileNotFoundError):
+        get_path_object(str(missing))
+    assert get_path_object(str(missing), strict=False) == missing.resolve()

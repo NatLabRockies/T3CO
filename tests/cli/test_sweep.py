@@ -291,3 +291,10 @@ def test_load_vehicle_scenario_energy_no_fastsim_missing_data(
         # Based on my read of Energy class (I should verify), but let's assume None or 0.
         assert en.mpgge is None or en.mpgge == 0
         assert en.primary_fuel_range_mi is None or en.primary_fuel_range_mi == 0
+
+
+def test_create_results_filepath_creates_missing_dst_dir(config, tmp_path):
+    config.dst_dir = str(tmp_path / "new" / "results")
+    result_filepath = create_results_filepath(config=config)
+    assert result_filepath.parent == (tmp_path / "new" / "results").resolve()
+    assert result_filepath.parent.is_dir()
