@@ -169,3 +169,27 @@ def test_write_results_summary_next_to_results(results_dir):
     assert pd.read_csv(summary_path)["n_runs"].tolist() == [1, 1]
     # Summary files must not be picked up as results by later discovery.
     assert summary_path not in discover_latest_results(results_dir).values()
+
+
+def test_written_summary_is_rounded(tmp_path):
+    results_path = write_result(
+        tmp_path,
+        "2026-01-01_10-00-00",
+        "fleetA",
+        [
+            {"fleet": "A", "discounted_tco_dol": 100.004, "total_vmt": 1.0, "mpgge": 6.12345},
+            {"fleet": "A", "discounted_tco_dol": 1 / 3, "total_vmt": 2.0, "mpgge": 7.0},
+        ],
+    )
+    cli_out = tmp_path / "cli_summary.csv"
+    printed = main(["--results-dir", str(tmp_path), "--out", str(cli_out)])
+    sweep_out = write_results_summary(results_path, group_cols=["fleet"])
+
+    for frame in [printed, pd.read_csv(cli_out), pd.read_csv(sweep_out)]:
+        numeric = frame.select_dtypes("number")
+        assert (numeric == numeric.round(2)).all().all()
+    assert pd.read_csv(sweep_out).loc[0, "median_mpgge"] == pytest.approx(6.56)
+
+    # The Python API keeps full precision.
+    unrounded = summarize_results(pd.read_csv(results_path), group_cols=["fleet"])
+    assert unrounded.loc[0, "median_mpgge"] == pytest.approx(6.561725)

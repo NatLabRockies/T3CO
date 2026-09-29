@@ -38,6 +38,9 @@ DEFAULT_METRICS = [
 
 STATS = ("median", "weighted_mean")
 
+# Decimal places used when writing or printing summaries.
+SUMMARY_DECIMALS = 2
+
 
 def discover_latest_results(
     results_dir: Union[str, Path], pattern: str = "results_*.csv"
@@ -225,7 +228,8 @@ def write_results_summary(
 ) -> Path:
     """
     Summarizes a single T3CO results file and writes the summary CSV next to it
-    as summary_<results file name> unless out_path is given.
+    as summary_<results file name> unless out_path is given. Values are rounded
+    to SUMMARY_DECIMALS places.
 
     Args:
         results_path (Union[str, Path]): T3CO results CSV.
@@ -243,7 +247,7 @@ def write_results_summary(
     summary = summarize_results(
         pd.read_csv(results_path), group_cols=group_cols, **summary_kwargs
     )
-    summary.to_csv(out_path, index=False)
+    summary.round(SUMMARY_DECIMALS).to_csv(out_path, index=False)
     return out_path
 
 
@@ -258,6 +262,7 @@ def main(argv: Optional[List[str]] = None) -> pd.DataFrame:
     """
     Command-line entry point: loads the newest result file per suffix from a
     results directory, summarizes it, prints the table and optionally writes a CSV.
+    Values are rounded to SUMMARY_DECIMALS places.
     """
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -276,7 +281,7 @@ def main(argv: Optional[List[str]] = None) -> pd.DataFrame:
         metrics=args.metrics,
         weight_col=args.weight_col,
         stats=args.stats,
-    )
+    ).round(SUMMARY_DECIMALS)
     with pd.option_context("display.width", 200, "display.max_columns", None):
         print(summary.to_string(index=False))
     if args.out:
