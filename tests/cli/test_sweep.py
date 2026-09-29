@@ -14,6 +14,7 @@ from t3co.cli.sweep import (
     generate_ledger,
     load_vehicle_scenario_energy,
     run_t3co,
+    summarize_run_results,
 )
 from t3co.constants import Global as gl
 from t3co.energy_models.energy import Energy
@@ -291,3 +292,47 @@ def test_load_vehicle_scenario_energy_no_fastsim_missing_data(
         # Based on my read of Energy class (I should verify), but let's assume None or 0.
         assert en.mpgge is None or en.mpgge == 0
         assert en.primary_fuel_range_mi is None or en.primary_fuel_range_mi == 0
+
+
+def test_summarize_run_results_from_config(config, tmp_path):
+    results_path = tmp_path / "results_2026-01-01_00-00-00_test.csv"
+    pd.DataFrame(
+        {
+            "vehicle_veh_pt_type": ["BEV", "BEV", "Conv"],
+            "discounted_tco_dol": [100.0, 300.0, 200.0],
+            "total_vmt": [10.0, 30.0, 20.0],
+        }
+    ).to_csv(results_path, index=False)
+
+    # The demo config leaves summary_group_by blank, so no summary is written.
+    with patch("builtins.print"):
+        assert summarize_run_results(config=config, results_path=results_path) is None
+
+        config.summary_group_by = "vehicle_veh_pt_type"
+        summary_path = summarize_run_results(config=config, results_path=results_path)
+
+    assert summary_path == tmp_path / f"summary_{results_path.name}"
+    summary = pd.read_csv(summary_path).set_index("vehicle_veh_pt_type")
+    assert summary.loc["BEV", "n_runs"] == 2
+    assert summary.loc["BEV", "weighted_mean_discounted_tco_dol"] == pytest.approx(250.0)
+
+
+def test_apply_cli_overrides_summary_group_by(config):
+    args = SimpleNamespace(
+        vehicles=None,
+        scenarios=None,
+        eng_curves=None,
+        lw_curves=None,
+        aero_curves=None,
+        dst_dir=None,
+        algorithms=None,
+        x_tol=None,
+        f_tol=None,
+        n_max_gen=0,
+        pop_size=0,
+        nth_gen=None,
+        n_last=None,
+        summary_group_by=["scenario_model_year"],
+    )
+    apply_cli_overrides(config=config, args=args, argv=["--summary-group-by"])
+    assert config.summary_group_by == ["scenario_model_year"]

@@ -7,8 +7,10 @@ from t3co.tco.summary import (
     discover_latest_results,
     load_results,
     main,
+    parse_group_by,
     summarize_results,
     weighted_mean,
+    write_results_summary,
 )
 
 
@@ -140,3 +142,30 @@ def test_main_writes_csv(results_dir, tmp_path, capsys):
     written = pd.read_csv(out)
     assert written["result_suffix"].tolist() == summary["result_suffix"].tolist()
     assert "fleetA_diesel" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        (None, None),
+        (np.nan, None),
+        ("", None),
+        ("vehicle_veh_pt_type", ["vehicle_veh_pt_type"]),
+        ("a; b", ["a", "b"]),
+        ("a,b", ["a", "b"]),
+        ("['a', 'b']", ["a", "b"]),
+        (["a", "b"], ["a", "b"]),
+    ],
+)
+def test_parse_group_by(value, expected):
+    assert parse_group_by(value) == expected
+
+
+def test_write_results_summary_next_to_results(results_dir):
+    results_path = discover_latest_results(results_dir)["fleetA_diesel"]
+    summary_path = write_results_summary(results_path, group_cols=["mpgge"])
+
+    assert summary_path == results_path.with_name(f"summary_{results_path.name}")
+    assert pd.read_csv(summary_path)["n_runs"].tolist() == [1, 1]
+    # Summary files must not be picked up as results by later discovery.
+    assert summary_path not in discover_latest_results(results_dir).values()
