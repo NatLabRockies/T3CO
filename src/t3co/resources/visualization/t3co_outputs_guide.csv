@@ -61,6 +61,8 @@ motor_control_power_elecs_cost_dol,Motor Controller & Power Electronics Cost  [\
 plug_cost_dol,Plugin Charger Cost  [\$],Estimated plugin charger component cost in dollars - contributes to MSRP,float
 battery_cost_dol,Battery Cost  [\$],Estimated battery/ESS component cost in dollars - contributes to MSRP,float
 purchase_tax_dol,Purchase Tax  [\$],Estimated purchased/excise tax  in dollars - calculated from MSRP,float
+purchasing_downpayment_dol,Down Payment [\$],"Estimated purchasing down payment in dollars - the capital outlay at purchase for loan or lease; equal to MSRP plus tax for cash",float
+total_purchasing_payment_dol,Loan/Lease Payments [\$],"Estimated discounted sum of loan or lease payments in dollars - included in operating costs and TCO; zero for cash",float
 insurance_cost_dol,Insurance Cost [\$],Estimated insurance cost of vehicle in dollars - estimated from MSRP and scenario.insurance_rates_pct_per_yr,float
 total_maintenance_cost_dol,Maintenance Operating Cost  [\$],Estimated maintenance operating cost in dollars - calculated from VMT and scenario.maint_oper_cost_dol_per_mi,float
 total_fuel_cost_dol,Fuel Operating Cost  [\$],Estimated fuel operating cost in dollars - calculated from energy consumption and fuel prices,float

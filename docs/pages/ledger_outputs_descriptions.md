@@ -244,6 +244,14 @@
             <td>float</td>
         </tr>
         <tr>
+            <td>total_purchasing_payment_dol</td>
+            <td>OperatingCosts</td>
+            <td>Total Purchasing Payments</td>
+            <td>$</td>
+            <td>Estimated discounted sum of loan or lease payments (principal and interest for loan; depreciation, rent fee, and tax for lease). This is the purchasing amount included in discounted operating costs and TCO. Zero for the cash method</td>
+            <td>float</td>
+        </tr>
+        <tr>
             <td>insurance_cost_dol</td>
             <td>OperatingCosts</td>
             <td>Insurance Cost</td>

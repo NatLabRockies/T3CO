@@ -46,7 +46,7 @@ When a US zipcode is provided in the Config or Scenario `region` field, T3CO can
 - Dynamic Wireless Power Transfer - Analyze on-road charging technologies and its impact on cost
 - Optimization Toolbox with NSGA2, PatternSearch, NelderMead, and PSO algorithms for vehicle sizing and TCO minimization
 - Regionalized fuel prices via EIA AEO API with automatic zipcode-to-census-division resolution
-- Charts Module to visualize Ledgers and large sets of T3CO results
+- Visualization module to plot TCO breakdowns, histograms, and violin plots from results — static (matplotlib) or interactive HTML (Plotly), with a `--plot` flag on the sweep CLI
 
 ## Features Roadmap
 

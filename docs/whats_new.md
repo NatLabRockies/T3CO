@@ -1,6 +1,6 @@
 # What's New in T3CO 2.0
 
-T3CO 2.0 is a major release that introduces live fuel price data fetching from the EIA API, an expanded optimization toolbox, a dataclass-driven configuration system, and broader Python version support.
+T3CO 2.0 is a major release that introduces live fuel price data fetching from the EIA API, an expanded optimization toolbox, a dataclass-driven configuration system, a new visualization module, and broader Python version support.
 
 ## EIA Fuel Price Projections
 
@@ -97,6 +97,15 @@ A new `t3co.data_fetching` module houses the `EIAClient` class, which provides:
 - **Retry logic** with exponential backoff for transient network errors.
 - **Caching** to avoid redundant API calls within a session.
 - **Data extrapolation** to fill gaps in the AEO time series using backfill and compound annual growth rates.
+
+## Visualization Module
+
+The `t3co.visualize.charts.T3COCharts` class generates TCO breakdown, histogram, and violin plots from a results CSV or DataFrame, with a selectable backend:
+
+- `matplotlib` (default) — static PNG/PDF figures.
+- `plotly` — interactive, self-contained HTML.
+
+Plotting libraries ship as an optional extra (`pip install t3co[viz]`), and a sweep run can emit the charts automatically with `--plot`. See the [Visualization](./pages/visualization.md) page.
 
 ## Migration from 1.x
 
