@@ -339,7 +339,8 @@ class T3COCharts:
                 f"Violin plots require seaborn. {_VIZ_EXTRA_HINT}"
             ) from e
 
-    def _require_plotly(self):
+    @staticmethod
+    def _require_plotly():
         """Lazily imports the plotly stack with a helpful error."""
         try:
             import plotly.express as px
@@ -510,9 +511,10 @@ class T3COCharts:
         """
         import json
 
+        # Check for plotly first so a missing install gets the viz-extra hint.
+        go, _, _ = self._require_plotly()
         import plotly.io as pio
 
-        go, _, _ = self._require_plotly()
         df = self.t3co_results
 
         grouping = [c for c in self.group_columns if c != "None" and c in df.columns]
@@ -627,9 +629,9 @@ class T3COCharts:
             str: An HTML fragment. The Plotly library is not embedded here;
             ``write_html_report`` embeds it once for the whole report.
         """
+        self._require_plotly()  # fail early with the viz-extra hint
         import plotly.io as pio
 
-        self._require_plotly()  # fail early with the viz-extra hint
         group_options = ["None"] + [
             c
             for c in (group_cols or self.group_columns)
@@ -696,9 +698,10 @@ class T3COCharts:
         """
         import json
 
+        # Check for plotly first so a missing install gets the viz-extra hint.
+        go, _, _ = self._require_plotly()
         import plotly.io as pio
 
-        go, _, _ = self._require_plotly()
         df = self.t3co_results
 
         candidates = cols or [c for c in self.value_cols if c in df.columns]
@@ -787,9 +790,10 @@ class T3COCharts:
         """
         import json
 
+        # Check for plotly first so a missing install gets the viz-extra hint.
+        go, _, _ = self._require_plotly()
         import plotly.io as pio
 
-        go, _, _ = self._require_plotly()
         df = self.t3co_results
 
         x_candidates = x_cols or [c for c in self.group_columns if c != "None" and c in df.columns]
@@ -893,6 +897,7 @@ class T3COCharts:
         Returns:
             Path: The written file path.
         """
+        T3COCharts._require_plotly()  # fail early with the viz-extra hint
         import plotly.io as pio
         from plotly.offline import get_plotlyjs
 

@@ -1,5 +1,7 @@
 """Tests for the T3CO visualization module (t3co.visualize.charts.T3COCharts)."""
 
+import sys
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -100,6 +102,39 @@ def test_missing_scenario_name_does_not_break_init():
     tc = T3COCharts(results_df=df, backend="plotly")  # must not raise
     # tech_progress can't be parsed for every row, so it is skipped
     assert "tech_progress" not in tc.to_df().columns
+
+
+def _block_plotly(monkeypatch):
+    """Make every plotly import fail, as when the viz extra isn't installed."""
+    for module in ("plotly", "plotly.io", "plotly.offline", "plotly.express",
+                   "plotly.graph_objects", "plotly.subplots"):
+        monkeypatch.setitem(sys.modules, module, None)
+
+
+@pytest.mark.parametrize(
+    "build",
+    [
+        lambda tc, tmp: tc.interactive_explorer_html(),
+        lambda tc, tmp: tc.grouped_tco_html(),
+        lambda tc, tmp: tc.interactive_histogram_html(),
+        lambda tc, tmp: tc.interactive_violin_html(),
+        lambda tc, tmp: T3COCharts.write_html_report([], tmp / "report.html"),
+    ],
+)
+def test_html_builders_give_viz_hint_without_plotly(results_df, tmp_path, monkeypatch, build):
+    tc = T3COCharts(results_df=results_df, backend="plotly")
+    _block_plotly(monkeypatch)
+    # the friendly install hint, not a bare import error from plotly.io
+    with pytest.raises(ImportError, match=r"t3co\[viz\]"):
+        build(tc, tmp_path)
+
+
+def test_demo_skips_a_missing_backend(results_df, monkeypatch, capsys):
+    from t3co.demos import visualization_demo as demo
+
+    _block_plotly(monkeypatch)
+    demo.render(results_df, "plotly")  # must not raise
+    assert "[plotly] skipped" in capsys.readouterr().out
 
 
 def test_bad_backend_raises(results_df):

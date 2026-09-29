@@ -82,12 +82,16 @@ def render(results_df: pd.DataFrame, backend: str) -> None:
         results_df (pd.DataFrame): The T3CO results to plot.
         backend (str): "matplotlib" (static PNG) or "plotly" (interactive HTML).
     """
+    # T3COCharts imports the plotting libraries lazily, so a missing backend only
+    # surfaces while rendering; skip that backend instead of crashing.
     try:
-        tc = T3COCharts(results_df=results_df, backend=backend)
+        _render(T3COCharts(results_df=results_df, backend=backend), backend)
     except ImportError as e:
         print(f"\n[{backend}] skipped - {e}")
-        return
 
+
+def _render(tc: T3COCharts, backend: str) -> None:
+    """Renders and writes the plots for one backend (see :func:`render`)."""
     print(f"\n[{backend}] available group columns: {tc.group_columns}")
 
     if backend == "plotly":
