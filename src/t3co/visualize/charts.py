@@ -403,7 +403,9 @@ class T3COCharts:
             fig_x_size (int, optional): Figure width factor per subplot column. Defaults to 8.
             fig_y_size (int, optional): Figure height factor per subplot row. Defaults to 8.
             bar_width (float, optional): Bar width fraction (0-1). Defaults to 0.8.
-            legend_pos (float, optional): Legend horizontal offset (matplotlib only). Defaults to 0.25.
+            legend_pos (float, optional): Legend horizontal position (matplotlib only); 0.25
+                places it just right of the plot and larger values move it further right.
+                Defaults to 0.25.
             edgecolor (str, optional): Bar edge color (matplotlib only). Defaults to "none".
 
         Returns:
@@ -1004,15 +1006,6 @@ class T3COCharts:
                     ax2.set_yticks([])
                     ax2.set_ylabel(str(yv), fontsize=fontsize, labelpad=8)
 
-        legend_labels = [disc_label] + [self._label(c) for c in ycols]
-        handles, _ = axes[0][0].get_legend_handles_labels()
-        fig.legend(
-            handles,
-            legend_labels,
-            loc="center right",
-            bbox_to_anchor=(1 + legend_pos, 0.5),
-            fontsize=fontsize,
-        )
         fig.supylabel(r"Cost [$]", fontsize=fontsize)
         if x_group_col != "None":
             fig.supxlabel(self._label(x_group_col), fontsize=fontsize)
@@ -1022,7 +1015,33 @@ class T3COCharts:
             fontweight="bold",
         )
         fig.tight_layout()
+
+        # TCO marker first, then the cost components top-of-stack first so the
+        # legend reads in the same order as the bars.
+        handles, _ = axes[0][0].get_legend_handles_labels()
+        legend_handles = handles[:1] + handles[1:][::-1]
+        legend_labels = [disc_label] + [self._label(c) for c in reversed(ycols)]
+        # Anchor the legend's left edge just past the axes (including their tick
+        # and row labels) so it never covers the bars; legend_pos shifts it
+        # further, with the default 0.25 meaning no extra offset.
+        fig.legend(
+            legend_handles,
+            legend_labels,
+            loc="center left",
+            bbox_to_anchor=(self._axes_right_edge(fig) + 0.01 + legend_pos - 0.25, 0.5),
+            fontsize=fontsize,
+        )
         return fig
+
+    @staticmethod
+    def _axes_right_edge(fig) -> float:
+        """Right edge of the figure's axes and their labels, as a figure fraction."""
+        try:
+            renderer = fig.canvas.get_renderer()
+            right_px = max(ax.get_tightbbox(renderer).x1 for ax in fig.axes)
+            return right_px / fig.bbox.width
+        except Exception:  # pragma: no cover - backends without a renderer
+            return max(ax.get_position().x1 for ax in fig.axes)
 
     def _generate_violin_mpl(self, x_group_col, y_group_col, fig_width, fig_height):
         _, plt, FuncFormatter = self._require_matplotlib()

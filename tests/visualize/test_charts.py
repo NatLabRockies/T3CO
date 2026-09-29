@@ -295,6 +295,23 @@ def test_matplotlib_figures(results_df):
     assert isinstance(hist, Figure)
 
 
+def test_matplotlib_tco_legend_is_clear_of_bars_and_in_stack_order():
+    mpl = pytest.importorskip("matplotlib")
+    mpl.use("Agg")
+    tc = T3COCharts(results_df=_purchasing_method_results(), backend="matplotlib")
+    fig = tc.generate_tco_plots()
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    axes_right = max(ax.get_tightbbox(renderer).x1 for ax in fig.axes)
+    legend = fig.legends[0]
+    # the legend sits right of the axes and their labels instead of over the bars
+    assert legend.get_window_extent(renderer).x0 >= axes_right
+    # TCO marker first, then the top of the stack first (residual is at the bottom)
+    labels = [t.get_text() for t in legend.get_texts()]
+    assert labels[0] == tc._label("discounted_tco_dol")
+    assert labels[-1] == tc._label("residual_cost_dol")
+
+
 def test_matplotlib_violin_requires_seaborn(results_df):
     pytest.importorskip("seaborn")  # seaborn is only needed for the violin plot
     mpl = pytest.importorskip("matplotlib")
