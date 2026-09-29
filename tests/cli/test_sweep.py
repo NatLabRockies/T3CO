@@ -8,6 +8,7 @@ import pytest
 from t3co.cli.sweep import (
     _build_optimization_algorithm,
     _build_optimization_termination,
+    _population_pool_is_available,
     apply_cli_overrides,
     create_results_filepath,
     export_results_to_csv,
@@ -366,3 +367,22 @@ def test_load_vehicle_scenario_energy_no_fastsim_missing_data(
         # Based on my read of Energy class (I should verify), but let's assume None or 0.
         assert en.mpgge is None or en.mpgge == 0
         assert en.primary_fuel_range_mi is None or en.primary_fuel_range_mi == 0
+
+
+def test_population_pool_is_available_in_main_process():
+    """The optimizer may open its own pool when the sweep is not already pooled."""
+    assert _population_pool_is_available() is True
+
+
+def test_population_pool_is_unavailable_inside_a_pool_worker():
+    """Under --run-multi the optimizer must not try to open a nested pool.
+
+    generate_ledger runs in a daemonic worker there, and daemonic processes may
+    not start children, so opening the inner pool raises
+    "AssertionError: daemonic processes are not allowed to have children" and
+    aborts the whole sweep.
+    """
+    from multiprocessing import Pool
+
+    with Pool(processes=1) as pool:
+        assert pool.apply(_population_pool_is_available) is False

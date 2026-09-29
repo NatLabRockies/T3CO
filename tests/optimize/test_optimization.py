@@ -10,6 +10,13 @@ try:
 except ImportError as e:
     pytest.skip(f"Skipping optimization tests: {e}", allow_module_level=True)
 
+try:
+    import fastsim  # noqa: F401
+
+    fastsim_installed = True
+except (ImportError, AttributeError):
+    fastsim_installed = False
+
 
 @pytest.fixture
 def mock_vehicle():
@@ -210,3 +217,70 @@ def test_run_optimization():
         MockScenario.assert_called()
         MockPool.assert_called_with(2)
         mock_minimize.assert_called()
+
+
+@pytest.mark.skipif(
+    not fastsim_installed, reason="Requires FASTSim to evaluate real designs"
+)
+def test_serial_and_parallel_evaluation_agree():
+    """The same designs must score the same however the population is evaluated.
+
+    The optimizer shares one Vehicle and one Scenario across every candidate
+    design. Serial evaluation reuses those objects directly, while
+    StarmapParallelization pickles the problem once per generation and spreads
+    the designs over worker chunks. Any state written back to the shared
+    objects therefore makes the two paths disagree, and makes parallel runs
+    depend on how the chunks happen to fall across workers.
+
+    The repeated design in X is deliberate: it pins down that evaluating one
+    point twice yields one answer.
+    """
+    from multiprocessing import Pool
+
+    from pymoo.core.problem import LoopedElementwiseEvaluation
+
+    try:
+        from pymoo.parallelization.starmap import StarmapParallelization
+    except ImportError:
+        from pymoo.core.problem import StarmapParallelization
+
+    from t3co.input_data.config import Config
+    from t3co.input_data.scenario import Scenario
+    from t3co.input_data.vehicle import Vehicle
+
+    def build_problem(runner):
+        config = Config()
+        config.from_csv(filename=str(Config().config_filename), analysis_id=1)
+        config.check_drivecycles_and_create_selections()
+        config.read_auxiliary_files()
+        selection = config.selections[0]
+        vehicle = Vehicle().from_config(selection=selection, config=config)
+        vehicle.set_veh_kg()
+        scenario = Scenario().from_csv(
+            selection=selection, scenario_file=config.scenario_file
+        )
+        scenario.override_from_config(config=config)
+        config.vehicle_life_yr = scenario.vehicle_life_yr
+        return VehicleDesignOpt(vehicle, scenario, config, runner=runner)
+
+    X = np.array([[290.0], [310.0], [330.0], [290.0]])
+
+    serial = build_problem(LoopedElementwiseEvaluation()).evaluate(
+        X, return_values_of=["F", "G"]
+    )
+
+    pool = Pool(2)
+    try:
+        parallel = build_problem(StarmapParallelization(pool.starmap)).evaluate(
+            X, return_values_of=["F", "G"]
+        )
+    finally:
+        pool.close()
+        pool.join()
+
+    np.testing.assert_allclose(serial[0], parallel[0], rtol=0, atol=0)
+    np.testing.assert_allclose(serial[1], parallel[1], rtol=0, atol=0)
+
+    # the repeated design scores identically within a single batch
+    np.testing.assert_allclose(serial[0][0], serial[0][3], rtol=0, atol=0)
+    np.testing.assert_allclose(parallel[0][0], parallel[0][3], rtol=0, atol=0)
