@@ -1,12 +1,41 @@
 """Tests for the T3CO visualization module (t3co.visualize.charts.T3COCharts)."""
 
+import numpy as np
 import pandas as pd
 import pytest
 
+from t3co.constants import Global as gl
 from t3co.visualize.charts import T3COCharts
 
 # Bare Ledger cost fields that survive 2.0 flattening unchanged.
 COST_COLS = list(T3COCharts.COST_COLS.keys())
+
+
+def _purchasing_method_results(methods=("cash", "loan", "lease")) -> pd.DataFrame:
+    """Real Ledger rows for one demo vehicle/scenario under each purchasing method."""
+    from t3co.energy_models.energy import Energy
+    from t3co.input_data.scenario import Scenario
+    from t3co.input_data.vehicle import Vehicle
+    from t3co.tco.ledger import Ledger
+
+    inputs = gl.RESOURCES_FOLDERPATH / "inputs"
+    rows = []
+    for method in methods:
+        vehicle = Vehicle.from_csv(
+            selection=1, vehicle_db_file=inputs / "Demo_FY22_vehicle_model_assumptions.csv"
+        )
+        vehicle.set_veh_kg()
+        scenario = Scenario.from_csv(
+            selection=1, scenario_file=inputs / "Demo_FY22_scenario_assumptions.csv"
+        )
+        scenario.purchasing_method = method
+        ledger = Ledger(
+            vehicle=vehicle,
+            scenario=scenario,
+            energy=Energy(mpgge=4.0, primary_fuel_range_mi=200.0),
+        )
+        rows.append(ledger.to_dict(flatten=True, exclude_list_fields=True))
+    return pd.DataFrame(rows)
 
 
 def _make_results() -> pd.DataFrame:
@@ -97,6 +126,28 @@ def test_plotly_ungrouped_tco(results_df):
     tc = T3COCharts(results_df=results_df, backend="plotly")
     fig = tc.generate_tco_plots()  # no grouping
     assert fig is not None
+
+
+def test_tco_stack_sums_to_tco_for_each_purchasing_method():
+    tc = T3COCharts(results_df=_purchasing_method_results(), backend="plotly")
+    df = tc.to_df()
+    stack = tc._tco_stack_frame()
+    # every bar decomposes the row's discounted TCO exactly
+    np.testing.assert_allclose(stack.sum(axis=1), df["discounted_tco_dol"], atol=1.0)
+    # cash stacks the MSRP breakdown; loan/lease stack down payment + payments
+    financed = df["scenario_purchasing_method"].isin(["loan", "lease"]).to_numpy()
+    msrp = stack[list(T3COCharts._MSRP_COMPONENTS)].sum(axis=1).to_numpy()
+    financing = stack[list(T3COCharts._FINANCING_COMPONENTS)].sum(axis=1).to_numpy()
+    assert (msrp[financed] == 0).all() and (financing[financed] > 0).all()
+    assert (msrp[~financed] > 0).all() and (financing[~financed] == 0).all()
+
+
+def test_plotly_tco_bars_sum_to_tco_marker():
+    pytest.importorskip("plotly.graph_objects")
+    tc = T3COCharts(results_df=_purchasing_method_results(), backend="plotly")
+    fig = tc.generate_tco_plots()
+    totals = sum(np.asarray(t.y, dtype=float) for t in fig.data if t.type == "bar")
+    np.testing.assert_allclose(totals, tc.to_df()["discounted_tco_dol"], atol=1.0)
 
 
 def test_ungrouped_tco_bars_are_separate_per_scenario(results_df):

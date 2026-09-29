@@ -65,6 +65,8 @@ class T3COCharts:
         "plug_cost_dol": "#6A5ACD",
         "battery_cost_dol": "#7EC0EE",
         "purchase_tax_dol": "#CD5B45",
+        "purchasing_downpayment_dol": "#008080",
+        "total_purchasing_payment_dol": "#FF7F0E",
         "insurance_cost_dol": "#CDC673",
         "total_maintenance_cost_dol": "#DAA520",
         "total_fuel_cost_dol": "#4682B4",
@@ -72,6 +74,20 @@ class T3COCharts:
         "discounted_downtime_oppy_cost_dol": "#8B0000",
         "payload_capacity_cost_dol": "#CD8C95",
     }
+
+    # The Ledger counts a cash purchase's capital as the MSRP breakdown (plus tax),
+    # but a loan/lease purchase's as the down payment plus the discounted payments.
+    # _tco_stack_frame() stacks whichever set applies to each row.
+    _MSRP_COMPONENTS = (
+        "glider_cost_dol",
+        "fuel_converter_cost_dol",
+        "fuel_storage_cost_dol",
+        "motor_control_power_elecs_cost_dol",
+        "plug_cost_dol",
+        "battery_cost_dol",
+        "purchase_tax_dol",
+    )
+    _FINANCING_COMPONENTS = ("purchasing_downpayment_dol", "total_purchasing_payment_dol")
 
     # Weight-class boundaries (kg, upper-inclusive) used to derive vehicle_weight_class.
     _WEIGHT_CLASS_BINS = [0, 2722, 3856, 4536, 6350, 7257, 8845, 11793, 14969, 50000]
@@ -183,6 +199,44 @@ class T3COCharts:
         return {
             k: v for k, v in self.COST_COLS.items() if k in self.t3co_results.columns
         }
+
+    def _financed_mask(self, df: pd.DataFrame) -> pd.Series:
+        """True for loan/lease rows, whose capital is a down payment plus payments."""
+        method_col = next(
+            (c for c in ("purchasing_method", "scenario_purchasing_method") if c in df.columns),
+            None,
+        )
+        if method_col is None or "total_purchasing_payment_dol" not in df.columns:
+            return pd.Series(False, index=df.index)
+        return df[method_col].astype(str).str.lower().isin(["loan", "lease"])
+
+    def _tco_stack_frame(self, df: pd.DataFrame = None) -> pd.DataFrame:
+        """
+        Per-row values stacked in the TCO breakdown, so that each bar sums to the
+        row's discounted TCO.
+
+        Cash rows stack the MSRP breakdown; loan/lease rows stack the down payment
+        and discounted payments instead (the terms the Ledger counts in TCO), with
+        the MSRP components zeroed. The results data itself is left unchanged.
+        """
+        df = self.t3co_results if df is None else df
+        cols = list(self.present_cost_cols())
+        frame = df[cols].apply(pd.to_numeric, errors="coerce").fillna(0.0).astype(float)
+        financed = self._financed_mask(df)
+        msrp = [c for c in self._MSRP_COMPONENTS if c in frame.columns]
+        financing = [c for c in self._FINANCING_COMPONENTS if c in frame.columns]
+        frame.loc[financed, msrp] = 0.0
+        frame.loc[~financed, financing] = 0.0
+        return frame
+
+    def _stack_components(self, frame: pd.DataFrame) -> dict:
+        """Cost components (with colors) that contribute to at least one bar."""
+        components = {
+            c: color
+            for c, color in self.present_cost_cols().items()
+            if frame[c].abs().sum() > 0
+        }
+        return components or self.present_cost_cols()
 
     # ------------------------------------------------------------------ #
     # Schema normalization
@@ -876,7 +930,8 @@ class T3COCharts:
         _, plt, FuncFormatter = self._require_matplotlib()
 
         df = self.t3co_results
-        cost_cols = self.present_cost_cols()
+        stack = self._tco_stack_frame(df)
+        cost_cols = self._stack_components(stack)
         ycols = list(cost_cols.keys())
         colors = list(cost_cols.values())
         disc_label = self._label("discounted_tco_dol")
@@ -921,7 +976,7 @@ class T3COCharts:
                     zorder=3,
                     label=disc_label,
                 )
-                sub.plot.bar(
+                stack.loc[sub.index].plot.bar(
                     y=ycols,
                     stacked=True,
                     ax=ax,
@@ -1031,7 +1086,8 @@ class T3COCharts:
         go, _, make_subplots = self._require_plotly()
 
         df = self.t3co_results
-        cost_cols = self.present_cost_cols()
+        stack = self._tco_stack_frame(df)
+        cost_cols = self._stack_components(stack)
         grouped = x_group_col != "None" or y_group_col != "None"
 
         x_groups = self._group_values(x_group_col)
@@ -1073,7 +1129,7 @@ class T3COCharts:
                     fig.add_trace(
                         go.Bar(
                             x=xpos,
-                            y=sub[col],
+                            y=stack.loc[sub.index, col],
                             name=self._plotly_label(col),
                             marker_color=color,
                             legendgroup=col,

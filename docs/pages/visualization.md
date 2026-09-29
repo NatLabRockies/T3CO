@@ -41,6 +41,8 @@ T3COCharts.write_html_report(
 
 Stacked cost components per scenario, with a marker for the discounted TCO. Pass `x_group_col` and/or `y_group_col` to split the results into a subplot grid (e.g. by fuel type and weight class).
 
+Each bar sums to the discounted TCO. Cash purchases stack the MSRP breakdown; loan and lease purchases stack the **down payment** and the **discounted loan/lease payments** instead, since those are what the Ledger counts. The residual value is a credit and stacks below zero, so the TCO marker sits at the bar's height above zero minus its depth below zero.
+
 <img src="../images/tco_breakdown_sample.png" alt="TCO breakdown" width="650"/>
 
 ### Histogram
