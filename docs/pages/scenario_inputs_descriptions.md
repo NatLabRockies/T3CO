@@ -1,27 +1,36 @@
 # Scenario Input Descriptions
-**Filter Options:**
-- **Units:** <select id="scenarioUnitsFilter"><option value="">All</option></select>
-- **Powertrain:** <select id="powertrainFilter">
-    <option value="">All</option>
-    <option value="Conv">Conv</option>
-    <option value="BEV">BEV</option>
-    <option value="HEV">HEV</option>
-    <option value="FCEV">FCEV</option></select>
-- **Data Type:** <select id="scenariodatatypeFilter"><option value="">All</option></select>
 
 <div class="filter-container">
-    <span><strong>T3CO Component:  </strong></span>
-    <select id="t3coComponentFilter" multiple size="7">
-        <option value="General">General</option>
-        <option value="TCO">TCO</option>
-        <option value="CapitalCosts">CapitalCosts</option>
-        <option value="OperatingCosts">OperatingCosts</option>
-        <option value="OpportunityCosts">OpportunityCosts</option>
-        <option value="Optimization">Optimization</option>
-    </select>
-    <div class="button-container">
+    <span class="filter-label"><strong>Filter Options</strong></span>
+    <span class="filter-item"><strong>Units:</strong>
+        <select id="scenarioUnitsFilter"><option value="">All</option></select>
+    </span>
+    <span class="filter-item"><strong>Powertrain:</strong>
+        <select id="powertrainFilter">
+            <option value="">All</option>
+            <option value="Conv">Conv</option>
+            <option value="BEV">BEV</option>
+            <option value="HEV">HEV</option>
+            <option value="FCEV">FCEV</option>
+        </select>
+    </span>
+    <span class="filter-item"><strong>Data Type:</strong>
+        <select id="scenariodatatypeFilter"><option value="">All</option></select>
+    </span>
+    <span class="filter-item"><strong>T3CO Component:</strong>
+        <select id="t3coComponentFilter" multiple>
+            <option value="General">General</option>
+            <option value="RunFASTSim">RunFASTSim</option>
+            <option value="TCO">TCO</option>
+            <option value="CapitalCosts">CapitalCosts</option>
+            <option value="OperatingCosts">OperatingCosts</option>
+            <option value="OpportunityCosts">OpportunityCosts</option>
+            <option value="Optimization">Optimization</option>
+        </select>
+    </span>
+    <span class="button-container">
         <button id="downloadTemplateBtn">Download Scenario Template</button>
-    </div>
+    </span>
 </div>
 
 <div class="table-container">
@@ -252,7 +261,7 @@
             <td>Lower and Upper bounds for fractional charge as a list [&lt;lower&gt;, &lt;upper&gt;]. &lt;lower&gt; is lowest fraction of charge/tank for a fractional charge at a fueling stop. &lt;upper&gt; is the highest fraction of charge/tank capacity above which it is preferred to rather fill up the batter/tank</td>
             <td>Conv, BEV, HEV, FCEV</td>
             <td>OpportunityCosts: Fueling Dwell</td>
-            <td>list\[float\]</td>
+            <td>list[float]</td>
         </tr>
         <tr>
             <td>fdt_num_free_dwell_trips</td>
@@ -459,7 +468,7 @@
             <td>Vehicle maintenance operating cost in dollars per mile traveled as vector of length equal to number of TCO years</td>
             <td>Conv, BEV, HEV, FCEV</td>
             <td>OperatingCosts: Maintenance</td>
-            <td>list\[float\]</td>
+            <td>list[float]</td>
         </tr>
         <tr>
             <td>markup_pct</td>
@@ -558,7 +567,7 @@
             <td>Unplanned maintenance time per mile traveled as a vector with length equal to number of TCO years</td>
             <td>Conv, BEV, HEV, FCEV</td>
             <td>OpportunityCosts: Maintenance Downtime</td>
-            <td>list\[float\]</td>
+            <td>list[float]</td>
         </tr>
         <tr>
             <td>msrp_total_dol</td>
@@ -801,7 +810,7 @@
             <td>Vehicle Miles Traveled as an array/list with length&gt;=vehicle_life_yr</td>
             <td>Conv, BEV, HEV, FCEV</td>
             <td>General</td>
-            <td>list\[int\]</td>
+            <td>list[int]</td>
         </tr>
         <tr>
             <td>vocation</td>
