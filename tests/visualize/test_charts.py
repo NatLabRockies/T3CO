@@ -87,6 +87,21 @@ def test_normalizes_prefixed_columns(results_df):
     assert "vehicle_fuel_type" in tc.group_columns
 
 
+def test_gvwr_above_50000_kg_is_class_8():
+    df = _make_results()
+    df["scenario_gvwr_kg"] = 60000.0
+    tc = T3COCharts(results_df=df, backend="plotly")
+    assert set(tc.to_df()["vehicle_weight_class"]) == {"Class 8"}
+
+
+def test_missing_scenario_name_does_not_break_init():
+    df = _make_results()
+    df.loc[0, "scenario_name"] = None
+    tc = T3COCharts(results_df=df, backend="plotly")  # must not raise
+    # tech_progress can't be parsed for every row, so it is skipped
+    assert "tech_progress" not in tc.to_df().columns
+
+
 def test_bad_backend_raises(results_df):
     with pytest.raises(ValueError):
         T3COCharts(results_df=results_df, backend="ggplot")

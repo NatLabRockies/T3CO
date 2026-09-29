@@ -90,7 +90,8 @@ class T3COCharts:
     _FINANCING_COMPONENTS = ("purchasing_downpayment_dol", "total_purchasing_payment_dol")
 
     # Weight-class boundaries (kg, upper-inclusive) used to derive vehicle_weight_class.
-    _WEIGHT_CLASS_BINS = [0, 2722, 3856, 4536, 6350, 7257, 8845, 11793, 14969, 50000]
+    # Class 8 is open-ended: every GVWR above 14,969 kg is Class 8.
+    _WEIGHT_CLASS_BINS = [0, 2722, 3856, 4536, 6350, 7257, 8845, 11793, 14969, np.inf]
     _WEIGHT_CLASS_LABELS = [
         "Class 1",
         "Class 2a",
@@ -279,15 +280,17 @@ class T3COCharts:
         # tech_progress is not a 2.0 field; best-effort parse from scenario_name
         # of the legacy "Vocation Type (FuelType, TechProgress)" format.
         if "tech_progress" not in df.columns and "scenario_name" in df.columns:
+            def parse_tech_progress(parts):
+                # parts is the split name, or NaN/None for a missing scenario name
+                if not isinstance(parts, list) or len(parts) < 2:
+                    return None
+                return parts[1].split(",")[-1].split(")")[0].strip()
+
             try:
-                parsed = (
-                    df["scenario_name"]
-                    .str.split("(")
-                    .apply(lambda x: x[1].split(",")[-1].split(")")[0].strip())
-                )
+                parsed = df["scenario_name"].str.split("(").apply(parse_tech_progress)
                 if parsed.notna().all() and (parsed.str.len() > 0).all():
                     df["tech_progress"] = parsed
-            except (IndexError, AttributeError):
+            except (AttributeError, TypeError):
                 pass  # scenario_name not in the legacy format; skip tech_progress.
 
         self.t3co_results = df
