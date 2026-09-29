@@ -302,7 +302,7 @@ def create_results_filepath(config: Config) -> Path:
             .replace(",", "-")
         )
         result_filename = f"results_{ts}_sel_{selections_string[:20]}.csv".strip("_")
-    output_path = get_path_object(config.dst_dir) / result_filename
+    output_path = get_path_object(config.dst_dir, strict=False) / result_filename
 
     if not output_path.exists():
         output_path.parent.mkdir(parents=True, exist_ok=True)

@@ -205,9 +205,20 @@ def remove_df_attrs(obj: object) -> None:
             delattr(obj, attr)
 
 
-def get_path_object(filename: str) -> Path:
+def get_path_object(filename: str, strict: bool = True) -> Path:
+    """
+    Resolves filename as an absolute path, or relative to the t3co resources folder.
+
+    Args:
+        filename (str): Absolute path, or path relative to the resources folder.
+        strict (bool, optional): Whether an absolute path must already exist. Use
+            False for output locations that may not have been created yet. Defaults to True.
+
+    Returns:
+        Path: The resolved path.
+    """
     return (
-        Path(filename).resolve(strict=True)
+        Path(filename).resolve(strict=strict)
         if Path(filename).is_absolute()
         else gl.RESOURCES_FOLDERPATH / filename
     )
