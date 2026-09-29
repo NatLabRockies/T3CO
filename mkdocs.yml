@@ -24,6 +24,15 @@ extra:
             using our <a href="..." target="_blank" rel="noopener">feedback form</a>.
   generator: false
 
+extra_css:
+  - javascripts/datatables/datatables.min.css
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/jquery-3.6.0.min.js
+  - javascripts/datatables/datatables.min.js
+  - stylesheets/datatables.js
+
 plugins:
   - search
   - mkdocstrings:
