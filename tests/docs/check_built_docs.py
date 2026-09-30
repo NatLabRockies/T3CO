@@ -1,10 +1,15 @@
-"""Guard the interactive parameter tables in the built documentation.
+"""Guard the interactive parameter tables and the images in the built documentation.
 
 The Inputs and Outputs pages are plain HTML tables that only become filterable
 because ``mkdocs.yml`` pulls in jQuery, DataTables and ``datatables.js``. Those
 ``extra_javascript`` / ``extra_css`` keys were silently dropped in a merge once
 before, which left every dropdown stuck on "All" on the published site while the
 docs still built cleanly. This check fails the build if that happens again.
+
+It also resolves every image and favicon the built pages reference. MkDocs
+rewrites Markdown image links for each page's output location, but not the src
+of a raw <img> tag, so a path that is right relative to the source file can
+still be broken on the published page.
 
 Usage:
     mkdocs build -d site
@@ -14,6 +19,9 @@ Usage:
 import re
 import sys
 from pathlib import Path
+from urllib.parse import unquote, urlparse
+
+MKDOCS_YML = Path(__file__).resolve().parents[2] / "mkdocs.yml"
 
 # Page -> the table it must render
 PAGES = {
@@ -48,6 +56,46 @@ FILTERS = {
         "ledgercategoryFilter", "ledgerUnitsFilter", "ledgerdatatypeFilter",
     ],
 }
+
+
+def site_base_path():
+    """Path the site is served under, taken from site_url (e.g. "/T3CO/")."""
+    match = re.search(r"^site_url:\s*(\S+)", MKDOCS_YML.read_text(), re.M)
+    path = urlparse(match.group(1)).path if match else "/"
+    return path if path.endswith("/") else path + "/"
+
+
+def check_images(site):
+    """Every local image or icon a built page references must exist in the site."""
+    errors = []
+    base = site_base_path()
+    pattern = re.compile(
+        r'<img[^>]*\ssrc="([^"]+)"|<link[^>]*\srel="(?:shortcut )?icon"[^>]*\shref="([^"]+)"'
+    )
+    for html_path in sorted(site.rglob("*.html")):
+        page = html_path.relative_to(site).as_posix()
+        for match in pattern.finditer(html_path.read_text(encoding="utf-8", errors="ignore")):
+            src = match.group(1) or match.group(2)
+            if re.match(r"^([a-z]+:|//|#)", src):
+                continue  # external URL, data URI, or in-page anchor
+            path = unquote(src.split("#")[0].split("?")[0])
+            if path.startswith("/"):
+                if not path.startswith(base):
+                    errors.append(
+                        "%s: image %s is outside the site path %s - set site_url in "
+                        "mkdocs.yml" % (page, src, base)
+                    )
+                    continue
+                target = site / path[len(base):]
+            else:
+                target = html_path.parent / path
+            if not target.resolve().is_file():
+                errors.append(
+                    "%s: image %s does not exist in the built site - use Markdown image "
+                    "syntax, which MkDocs rewrites per page, rather than a raw <img> "
+                    "path" % (page, src)
+                )
+    return errors
 
 
 def check(site_dir):
@@ -96,6 +144,7 @@ def check(site_dir):
                 "<div class=\"filter-container\"> instead of a markdown list" % page
             )
 
+    errors.extend(check_images(site))
     return errors
 
 
@@ -107,4 +156,7 @@ if __name__ == "__main__":
         for failure in failures:
             print("  - %s" % failure)
         sys.exit(1)
-    print("Documentation check passed: %d table pages wired up correctly." % len(PAGES))
+    print(
+        "Documentation check passed: %d table pages wired up correctly, and every "
+        "image resolves." % len(PAGES)
+    )
