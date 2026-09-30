@@ -85,6 +85,7 @@ nav:
         - Vehicle: pages/api/vehicle.md
         - Scenario: pages/api/scenario.md
         - Config: pages/api/config.md  
+        - Toggles: pages/api/toggles.md
       - Energy Module:
         - Energy: pages/api/energy.md
         - FASTSim Wrapper: pages/api/fastsim_wrapper.md
@@ -96,6 +97,10 @@ nav:
         - TCO Calc Per Year: pages/api/tcocalc.md
         - Ledger: pages/api/ledger.md
         - Results Summary: pages/api/summary.md
+      - Optimization Module:
+        - Optimization: pages/api/optimization.md
+      - Data Fetching Module:
+        - EIA Client: pages/api/eia_client.md
       - CLI Module:
         - Sweep: pages/api/sweep.md
       - Visualization Module:
