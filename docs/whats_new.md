@@ -14,10 +14,10 @@ Across the demo analyses in `T3COConfig.csv`, discounted TCO is 2.7% to 18.2% lo
 
 The `t3co.visualize.charts.T3COCharts` class generates TCO breakdown, histogram, and violin plots from a results CSV or DataFrame, with a selectable backend:
 
-- `matplotlib` (default) — static PNG/PDF figures.
+- `matplotlib` — static PNG/PDF figures (the default when using the class from Python).
 - `plotly` — interactive, self-contained HTML.
 
-Plotting libraries ship as an optional extra (`pip install t3co[viz]`), and a sweep run can emit the charts automatically with `--plot`. See the [Visualization](./pages/visualization.md) page.
+Plotting libraries ship as an optional extra (`pip install t3co[viz]`). A sweep run can generate the charts automatically: `--plot` writes one interactive Plotly report, and `--plot matplotlib` writes static PNGs. See the [Visualization](./pages/visualization.md) page.
 
 ### Results Summary
 

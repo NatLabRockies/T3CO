@@ -87,7 +87,7 @@ T3CO presents a demo file (`src/t3co/demos/demo.py`) for generating a `TCOCalc` 
 
 Run `python -m t3co.cli.sweep --help` for the full list of CLI arguments. Common ones:
 
-- `--plot [plotly|matplotlib]` — generate TCO charts after the run (see [Visualization](./pages/visualization.md)).
+- `--plot [plotly|matplotlib]` — generate TCO charts after the run: `plotly` (the default when no backend is given) writes one interactive HTML report, and `matplotlib` writes static PNGs (see [Visualization](./pages/visualization.md)).
 - `--run-multi` / `--n-processors N` — Batch Mode multiprocessing (see above).
 - `--eia-api-key`, `--eia-aeo-year`, `--eia-aeo-case` — control EIA fuel price lookups.
 
@@ -124,10 +124,11 @@ python -m t3co.cli.sweep --config T3COConfig.csv --analysis-id 0 --summary-group
 
 ## T3CO Visualization
 
-Turn a results CSV into a TCO breakdown chart, histogram, or violin plot — as static images (matplotlib) or interactive HTML (Plotly). Generate them automatically after a run with `--plot`:
+Turn a results CSV into a TCO breakdown chart, histogram, or violin plot — as static images (matplotlib) or interactive HTML (Plotly). Generate them automatically after a run with `--plot`, which writes one interactive Plotly report by default; add `matplotlib` for static PNGs instead:
 
 ```bash
-python -m t3co.cli.sweep --analysis-id=0 --plot
+python -m t3co.cli.sweep --analysis-id=0 --plot              # one interactive HTML report (default)
+python -m t3co.cli.sweep --analysis-id=0 --plot matplotlib   # static PNGs, one per chart
 ```
 
 See the [Visualization](./pages/visualization.md) page for the `T3COCharts` API, backends, and examples.

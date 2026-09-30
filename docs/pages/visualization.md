@@ -2,8 +2,10 @@
 
 The [`T3COCharts`](./api/charts.md) class (`t3co.visualize.charts`) turns a T3CO results CSV (or DataFrame) into three plots, each rendered with a selectable backend:
 
-- `backend="matplotlib"` (default) — static figures for PNG/PDF export.
+- `backend="matplotlib"` — static figures for PNG/PDF export. This is the default when you use the class from Python.
 - `backend="plotly"` — interactive, self-contained HTML.
+
+From the command line, `--plot` offers the same choice and defaults to the interactive Plotly report; see [Charts from the CLI](#charts-from-the-cli).
 
 ## Install
 
@@ -98,7 +100,14 @@ T3COCharts.write_html_report(
 
 ## Charts from the CLI
 
-Add `--plot` to any sweep run to generate the charts next to the results CSV. Install the extra first:
+Add `--plot` to any sweep run to generate the charts next to the results CSV. It takes an optional backend:
+
+| Option | Output |
+|---|---|
+| `--plot` or `--plot plotly` | One interactive, self-contained HTML report (`…_charts.html`) that combines the explorer and the three charts. This is the default. |
+| `--plot matplotlib` | Static PNG images, one per chart (`…_tco_breakdown.png`, `…_tco_histogram.png`, `…_tco_violin.png`). `--plot seaborn` does the same. |
+
+Both `--plot matplotlib` and `--plot=matplotlib` work. Install the extra first:
 
 ```bash
 pip install t3co[viz]
