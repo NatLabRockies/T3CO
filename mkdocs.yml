@@ -45,6 +45,9 @@ plugins:
   - mkdocstrings:
       handlers:
         python:
+          # The package lives under src/. Point mkdocstrings there so the API
+          # pages build without t3co being installed, as in the docs workflows.
+          paths: [src]
           options:
             show_source: true
             show_root_heading: true
