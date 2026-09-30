@@ -2,15 +2,6 @@
    Layout for the input/output parameter tables
    --------------------------------------------------------------------------- */
 
-/* Give the table pages the full window width. Material otherwise caps the
-   content column at 61rem, which is comfortable for prose but far too narrow
-   for a seven-column reference table. Scoped with :has() so ordinary pages keep
-   their normal measure; browsers without :has() simply fall back to scrolling
-   the table box below. */
-body:has(.table-container) .md-grid {
-  max-width: 100%;
-}
-
 /* The table scrolls inside this box rather than overflowing the page. Capping
    the height keeps the horizontal scrollbar directly beneath the visible rows -
    previously it belonged to the page body, so reaching it meant scrolling past
