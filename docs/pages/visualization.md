@@ -45,19 +45,19 @@ Stacked cost components per scenario, with a marker for the discounted TCO. Pass
 
 Each bar sums to the discounted TCO. Cash purchases stack the MSRP breakdown; loan and lease purchases stack the **down payment** and the **discounted loan/lease payments** instead, since those are what the Ledger counts. The residual value is a credit and stacks below zero, so the TCO marker sits at the bar's height above zero minus its depth below zero.
 
-<img src="../images/tco_breakdown_sample.png" alt="TCO breakdown" width="650"/>
+![TCO breakdown](../images/tco_breakdown_sample.png){ width="650" }
 
 ### Histogram
 
 Distribution of any numeric output across selections. `show_pct=True` plots the percentage of scenarios instead of a count.
 
-<img src="../images/histogram_sample.png" alt="Histogram" width="400"/>
+![Histogram](../images/histogram_sample.png){ width="400" }
 
 ### Violin
 
 Distribution of a metric across categories (e.g. `mpgge` by fuel type).
 
-<img src="../images/violinplot_sample.png" alt="Violin plot" width="400"/>
+![Violin plot](../images/violinplot_sample.png){ width="400" }
 
 ## Interactive explorer
 
