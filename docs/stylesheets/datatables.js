@@ -83,6 +83,51 @@ document.addEventListener("DOMContentLoaded", function () {
         updateLabel();
     }
 
+    /**
+     * Mirror a scroll box's horizontal scrollbar in a bar placed directly above
+     * it, so a wide table can be scrolled sideways without first scrolling down
+     * to the bottom of the box. The bar hides itself while the table fits.
+     */
+    function addTopScrollbar(scroller) {
+        let bar = document.createElement("div");
+        bar.className = "table-top-scrollbar";
+        let spacer = document.createElement("div");
+        bar.appendChild(spacer);
+        scroller.parentNode.insertBefore(bar, scroller);
+
+        function sync() {
+            // Match the box's visible width, which excludes its vertical
+            // scrollbar, so both bars scroll over exactly the same range.
+            bar.style.width = scroller.clientWidth + "px";
+            spacer.style.width = scroller.scrollWidth + "px";
+            bar.hidden = scroller.scrollWidth <= scroller.clientWidth;
+        }
+
+        // Assigning scrollLeft the value it already holds fires no scroll event,
+        // so the two scrollbars follow each other without feeding back.
+        bar.addEventListener("scroll", function () {
+            if (scroller.scrollLeft !== bar.scrollLeft) {
+                scroller.scrollLeft = bar.scrollLeft;
+            }
+        });
+        scroller.addEventListener("scroll", function () {
+            if (bar.scrollLeft !== scroller.scrollLeft) {
+                bar.scrollLeft = scroller.scrollLeft;
+            }
+        });
+
+        if (window.ResizeObserver) {
+            let observer = new ResizeObserver(sync);
+            observer.observe(scroller);
+            let table = scroller.querySelector("table");
+            if (table) {
+                observer.observe(table);
+            }
+        }
+        window.addEventListener("resize", sync);
+        sync();
+    }
+
     function setupDataTable(tableId, unitsFilterId, dataTypeFilterId, powertrainFilterId, t3coComponentFilterId, categoryFilterId, unitsColumn, dataTypeColumn, powertrainColumn, t3coComponentColumn, categoryColumn) {
         let table = new DataTable("#" + tableId, {
             paging: false,   // Show all rows
@@ -125,6 +170,9 @@ document.addEventListener("DOMContentLoaded", function () {
         let searchBox = wrapper.querySelector(".dataTables_filter");
         if (container && searchBox) {
             container.parentNode.insertBefore(searchBox, container);
+        }
+        if (container) {
+            addTopScrollbar(container);
         }
 
         function cellValue(searchData, column) {

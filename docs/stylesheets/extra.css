@@ -231,3 +231,58 @@ body:has(.table-container) .md-grid {
 .ms-dropdown__option:hover {
   background-color: var(--md-default-fg-color--lightest);
 }
+
+/* ---------------------------------------------------------------------------
+   Horizontal scrolling for wide tables
+   --------------------------------------------------------------------------- */
+
+/* Keep columns readable on narrower windows. Below these widths the table box
+   scrolls sideways instead of squeezing the columns until words break mid-word. */
+#configTable   { min-width: 900px; }
+#vehicleTable  { min-width: 1100px; }
+#ledgerTable   { min-width: 1200px; }
+#scenarioTable { min-width: 1300px; }
+
+/* Scrollbar mirrored above each table box. datatables.js creates it, keeps it in
+   step with the box, and hides it while the table fits. */
+.table-top-scrollbar {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+}
+
+.table-top-scrollbar > div {
+  height: 1px;
+}
+
+.table-top-scrollbar[hidden] {
+  display: none;
+}
+
+/* macOS hides scrollbars until the user scrolls, which would leave the top bar
+   invisible. Styling the WebKit scrollbar keeps both bars drawn in Chrome and
+   Safari; Firefox takes the standard properties instead. */
+.table-top-scrollbar::-webkit-scrollbar,
+.table-container::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+
+.table-top-scrollbar::-webkit-scrollbar-thumb,
+.table-container::-webkit-scrollbar-thumb {
+  background-color: var(--md-default-fg-color--lighter);
+  border-radius: 5px;
+}
+
+.table-top-scrollbar::-webkit-scrollbar-track,
+.table-container::-webkit-scrollbar-track {
+  background-color: var(--md-default-fg-color--lightest);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .table-top-scrollbar,
+  .table-container {
+    scrollbar-width: thin;
+    scrollbar-color: var(--md-default-fg-color--lighter) var(--md-default-fg-color--lightest);
+  }
+}
