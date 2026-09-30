@@ -87,11 +87,11 @@ watch:
 
 nav:
     - Home: index.md
-    - What's New: whats_new.md
     - Installation: installation.md
     - Quick Start: quick_start.md
     - Overview: T3CO_Overview.md
     - Costs and Features: pages/cost_and_tool_features.md
+    - What's New: whats_new.md
     - Inputs: 
       - Vehicle: pages/vehicle_inputs_descriptions.md
       - Scenario: pages/scenario_inputs_descriptions.md
