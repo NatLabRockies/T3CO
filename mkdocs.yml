@@ -124,7 +124,12 @@ nav:
         - Sweep: pages/api/sweep.md
       - Visualization Module:
         - Charts: pages/api/charts.md
+      - Constants Module:
+        - Global: pages/api/Global.md
       - Utility Module:
         - Demo Files Installer: pages/api/demo_files_installer.md
         - Print Class Objects: pages/api/print_class_objects.md
+      - Demos Module:
+        - Demo: pages/api/demo.md
+        - Visualization Demo: pages/api/visualization_demo.md
 
