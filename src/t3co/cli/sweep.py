@@ -21,6 +21,7 @@ from t3co.input_data.config import Config
 from t3co.input_data.scenario import Scenario
 from t3co.input_data.vehicle import Vehicle
 from t3co.tco.ledger import Ledger
+from t3co.tco.summary import parse_group_by, write_results_summary
 from t3co.utils.print_class_objects import get_path_object
 
 try:
@@ -102,6 +103,9 @@ def apply_cli_overrides(config: Config, args, argv: list[str] | None = None) -> 
 
     if _argument_was_provided(argv, "--skip-all-opt", "--skopt"):
         config.skip_all_opt = True
+
+    if _argument_was_provided(argv, "--summary-group-by"):
+        config.summary_group_by = args.summary_group_by
 
     return config
 
@@ -523,6 +527,25 @@ def export_results_to_csv(
     )
 
 
+def summarize_run_results(config: Config, results_path: Union[str, Path]) -> Path | None:
+    """
+    Writes a grouped summary of a sweep's results file when config.summary_group_by is set.
+
+    Args:
+        config (Config): The configuration instance.
+        results_path (Union[str, Path]): The results CSV written by the sweep.
+
+    Returns:
+        Path | None: Path of the summary CSV, or None if no summary was requested.
+    """
+    group_cols = parse_group_by(config.summary_group_by)
+    if not group_cols:
+        return None
+    summary_path = write_results_summary(results_path, group_cols=group_cols)
+    print(f"T3CO results summary saved to: {summary_path}")
+    return summary_path
+
+
 DEFAULT_PLOT_BACKEND = "plotly"
 
 
@@ -658,6 +681,7 @@ def run_t3co(
         if len(error_list):
             print(f"Selections {error_list} were skipped due to assumptions errors.")
         print(f"T3CO results saved to: {output_path}")
+        summarize_run_results(config=config, results_path=output_path)
         if plot_backend and output_path:
             save_default_plots(output_path, backend=plot_backend)
 
@@ -909,6 +933,12 @@ if __name__ == "__main__":
         "Use '--plot' for interactive Plotly HTML (default) or '--plot matplotlib' for static PNGs. "
         "Requires the 'viz' extra: pip install 't3co[viz]'.",
     )
+    parser.add_argument(
+        "--summary-group-by",
+        nargs="+",
+        default=None,
+        help="Result columns to group by for a summary CSV written next to the results (overrides config.summary_group_by).",
+    )
 
     args = parser.parse_args()
 
@@ -997,6 +1027,7 @@ if __name__ == "__main__":
             print("Sorting results by selection...")
             sort_csv_file(input_path=result_filepath, sort_by="selection")
             print(f"T3CO results saved and sorted to: {result_filepath}")
+            summarize_run_results(config=config, results_path=result_filepath)
 
         if args.plot:
             save_default_plots(result_filepath, backend=args.plot)

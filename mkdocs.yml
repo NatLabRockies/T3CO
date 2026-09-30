@@ -95,6 +95,7 @@ nav:
       - TCO Module:
         - TCO Calc Per Year: pages/api/tcocalc.md
         - Ledger: pages/api/ledger.md
+        - Results Summary: pages/api/summary.md
       - CLI Module:
         - Sweep: pages/api/sweep.md
       - Visualization Module:

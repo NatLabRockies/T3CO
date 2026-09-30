@@ -79,6 +79,18 @@ After running the analysis, T3CO stores the results .CSV file in the directory s
 
 The results file includes a comprehensive list of [***Ledger Outputs***](./pages/ledger_outputs_descriptions.md) that were calculated by the various ***T3CO Modules***. In addition to the T3CO outputs, all the *Vehicle* input parameters (denoted by a prefix: `input_vehicle_value_`), *Scenario* input parameters(denoted by a prefix: `scenario_`), and *Config* parameters (denoted by a prefix: `config_`) are also present in the results file. When the optional optimization module is run, the optimized vehicle parameters are also listed ((denoted by a prefix: `optimized_vehicle_value_`)) instead of NaN values for non-optimization runs.
 
+### Summarizing Results
+To compare scenarios across several runs, `t3co_summarize` (or `python -m t3co.tco.summary`) collects the newest `results_<timestamp>_<suffix>.csv` for each result suffix in a directory. It reports the number of runs, the median, and the VMT-weighted mean of the key ledger outputs, plus the TCO per mile for each group:
+```bash
+t3co_summarize --results-dir results/ --out results/summary.csv
+```
+Use `--group-by` to group by other result columns (e.g. `scenario_vehicle_class`), `--metrics` to choose ledger columns, and `--stats` to choose between `median` and `weighted_mean`. The same functions are available from Python through `t3co.tco.summary.load_results` and `summarize_results`.
+
+To get a summary written automatically, set `summary_group_by` in the Config file (e.g. `scenario_model_year; vehicle_veh_pt_type`) or pass `--summary-group-by` to the sweep. The sweep then writes `summary_<results file>.csv` next to the results:
+```bash
+python -m t3co.cli.sweep --config T3COConfig.csv --analysis-id 0 --summary-group-by scenario_model_year vehicle_veh_pt_type
+```
+
 ## T3CO Visualization
 
 Turn a results CSV into a TCO breakdown chart, histogram, or violin plot — as static images (matplotlib) or interactive HTML (Plotly). Generate them automatically after a run with `--plot`:
