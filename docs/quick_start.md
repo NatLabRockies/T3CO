@@ -47,7 +47,38 @@ python -m t3co.cli.sweep --analysis-id=3 --run-multi
 
 The Batch Mode allows T3CO to run parallel analyses utilizing multiple processors (or CPU cores) denoted by CLI argument `--n-processors`(defaults to 9). Adjust this number accordingly. To get the fastest run time, close other processor intensive programs running on your computer and assign `--n-processors` as one or two less than the max number of cores.
 
-When a folder path is provided in the T3COConfig.csv file (`config.drive_cycle`) containing "n" number of valid drivecycles, T3CO generates "n" scenarios for each *Vehicle* selections mentioned in `config.selections` with the `scenario.drive_cycle` populated with each of the "n" drivecycles. For Vehicle selection "1" in config.selections, the generated selection numbers are denoted by "1_000" for the first drivecycle, "1_001" for the second drivecycle, and so on.
+When a folder path is provided in the T3COConfig.csv file (`config.drive_cycle`) containing "n" number of valid drivecycles, T3CO generates "n" scenarios for each *Vehicle* selections mentioned in `config.selections` with the `scenario.drive_cycle` populated with each of the "n" drivecycles. For Vehicle selection "1" in config.selections, the generated selection numbers are denoted by "1_0000" for the first drivecycle, "1_0001" for the second drivecycle, and so on.
+
+## Optimizing Vehicle Designs
+An analysis optimizes when `skip_all_opt` is `FALSE` in its Config row, as in the demo analysis `config.analysis_id`=1. For each selection, T3CO sizes the powertrain within the Scenario's `knob_min_*`/`knob_max_*` bounds to minimize discounted TCO, subject to whichever performance constraints are enabled (`constraint_accel`, `constraint_grade`, `constraint_range`). The optimized values are written to the results as `optimized_vehicle_value_*` columns.
+
+```bash
+python -m t3co.cli.sweep --analysis-id=1
+```
+
+Each setting below can be given as a CLI flag or as a column in the Config file; a CLI flag overrides the Config value.
+
+| CLI flag | Config column | Default | Meaning |
+|---|---|---|---|
+| `--algorithms` | `algorithms` | `NSGA2` | `NSGA2`, `PatternSearch`, `NelderMead`, or `PSO`. If several are given, the first is used. NSGA2 seeds its population with Latin Hypercube sampling. |
+| `--pop-size` | `pop_size` | 25 | Designs evaluated per generation (NSGA2). |
+| `--n-max-gen` | `n_max_gen` | 1000 | Hard limit on the number of generations. |
+| `--x-tol` | `x_tol` | 0.001 | Design-space tolerance for convergence. |
+| `--f-tol` | `f_tol` | 0.001 | Objective-space tolerance for convergence. |
+| `--n-last` | `n_last` | 5 | Number of recent generations that must all satisfy the tolerances before the run stops. |
+| `--nth-gen` | `nth_gen` | 1 | Check convergence every `nth_gen` generations. |
+| `--n-processes` | `n_processes` | 9 | Processes used to evaluate each generation's designs in parallel. |
+| `--no-parallel` | `parallel` (`FALSE`) | parallel | Evaluate designs one at a time instead. Results are identical; only run time changes. |
+
+**Choosing between the two kinds of parallelism.** Within a single optimization, each generation's designs are evaluated across `--n-processes` processes. With `--run-multi`, whole selections instead run in parallel across `--n-processors` workers, and each optimization then evaluates its designs serially inside its worker, since a pool worker cannot start a pool of its own. Use the default for one or a few optimizing selections, and `--run-multi` when there are many.
+
+To optimize a single selection without writing a results file, run the optimization module directly. It prints the best design and its discounted TCO:
+
+```bash
+python -m t3co.optimize.optimization --selection 1 --analysis-id 1 --n-processes 4
+```
+
+It accepts `--config` (default: the bundled `T3COConfig.csv`), `--analysis-id` (default `1`), `--selection` (default `1`), `--n-processes` (default `9`), and `--no-parallel`.
 
 ## Running T3CO Demo
 T3CO presents a demo file (`src/t3co/demos/demo.py`) for generating a `TCOCalc` for a specific year and a `Ledger` object for a given vehicle, scenario, and energy inputs. It showcases the modularity of the tool and allows the user to also download the results as a JSON or CSV file.
@@ -84,7 +115,7 @@ To compare scenarios across several runs, `t3co_summarize` (or `python -m t3co.t
 ```bash
 t3co_summarize --results-dir results/ --out results/summary.csv
 ```
-Use `--group-by` to group by other result columns (e.g. `scenario_vehicle_class`), `--metrics` to choose ledger columns, and `--stats` to choose between `median` and `weighted_mean`. The same functions are available from Python through `t3co.tco.summary.load_results` and `summarize_results`.
+Use `--group-by` to group by other result columns (e.g. `scenario_vehicle_class`), `--metrics` to choose ledger columns, `--stats` to choose between `median` and `weighted_mean`, and `--weight-col` to weight the means by a column other than `total_vmt`. The same functions are available from Python through `t3co.tco.summary.load_results` and `summarize_results`.
 
 To get a summary written automatically, set `summary_group_by` in the Config file (e.g. `scenario_model_year; vehicle_veh_pt_type`) or pass `--summary-group-by` to the sweep. The sweep then writes `summary_<results file>.csv` next to the results:
 ```bash

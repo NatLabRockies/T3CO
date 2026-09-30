@@ -141,6 +141,34 @@
             <td>int</td>
         </tr>
         <tr>
+            <td>n_last</td>
+            <td>Convergence Window</td>
+            <td></td>
+            <td>Number of recent generations that must all satisfy x_tol and f_tol before the optimization stops. Default when the column is absent: 5.</td>
+            <td>int</td>
+        </tr>
+        <tr>
+            <td>nth_gen</td>
+            <td>Convergence Check Interval</td>
+            <td></td>
+            <td>Check convergence every nth_gen generations. Default when the column is absent: 1.</td>
+            <td>int</td>
+        </tr>
+        <tr>
+            <td>n_processes</td>
+            <td>Optimizer Processes</td>
+            <td></td>
+            <td>Number of processes used to evaluate each generation&#x27;s designs in parallel. Ignored under --run-multi, where each selection already runs in its own worker. Default when the column is absent: 9.</td>
+            <td>int</td>
+        </tr>
+        <tr>
+            <td>parallel</td>
+            <td>Parallel Design Evaluation</td>
+            <td></td>
+            <td>TRUE evaluates each generation&#x27;s designs in a process pool of n_processes; FALSE evaluates them one at a time. Results are identical either way. Default when the column is absent: TRUE.</td>
+            <td>bool</td>
+        </tr>
+        <tr>
             <td>lw_imp_curves</td>
             <td>Lightweighting Improvement Curves Filepath</td>
             <td></td>
