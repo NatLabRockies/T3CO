@@ -2,7 +2,7 @@
 
 ## T3CO 2.1
 
-T3CO 2.1 corrects a residual-value error in 2.0 that affected every total-cost-of-ownership result, adds a visualization module, and makes vehicle optimization faster, reproducible, and usable alongside batch mode.
+T3CO 2.1 corrects a residual-value error in 2.0 that affected every total-cost-of-ownership result, adds visualization and results-summary modules, and makes vehicle optimization faster, reproducible, and usable alongside batch mode.
 
 ### Residual value correction — TCO results change
 
@@ -18,6 +18,16 @@ The `t3co.visualize.charts.T3COCharts` class generates TCO breakdown, histogram,
 - `plotly` — interactive, self-contained HTML.
 
 Plotting libraries ship as an optional extra (`pip install t3co[viz]`), and a sweep run can emit the charts automatically with `--plot`. See the [Visualization](./pages/visualization.md) page.
+
+### Results Summary
+
+The new `t3co.tco.summary` module compares scenarios across runs. It collects the newest `results_<timestamp>_<suffix>.csv` for each result suffix in a directory and reports, per group, the number of runs, the median, and the VMT-weighted mean of the key ledger outputs, plus TCO per mile:
+
+```bash
+t3co_summarize --results-dir results/ --out results/summary.csv
+```
+
+`--group-by`, `--metrics`, and `--stats` control the grouping columns, ledger outputs, and statistics. To have a sweep write `summary_<results file>.csv` next to its results automatically, set the new Config column `summary_group_by` or pass `--summary-group-by`. See [Summarizing Results](./quick_start.md#summarizing-results).
 
 ### Faster, reproducible optimization
 
