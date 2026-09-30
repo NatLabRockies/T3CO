@@ -2,13 +2,13 @@
 
 ## T3CO 2.1
 
-T3CO 2.1 corrects a residual-value error in 2.0 that affected every total-cost-of-ownership result, adds visualization and results-summary modules, and makes vehicle optimization faster, reproducible, and usable alongside batch mode.
+T3CO 2.1 refines the residual-value model, adds visualization and results-summary modules, and makes vehicle optimization faster, reproducible, and available in batch mode.
 
-### Residual value correction — TCO results change
+### Refined residual-value model — TCO results change
 
-**Every TCO result produced by T3CO 2.0.0 overstated total cost of ownership.** Residual-value depreciation was applied twice. For a vehicle with a 4-year life depreciating 9% a year, the residual should be 0.91⁴ = 68.6% of MSRP; 2.0.0 used 0.91⁸ = 47.0%. Because the residual is credited against cost, understating it inflated TCO. Runs that used the optimization module were affected further, since the error compounded each time the optimizer re-evaluated a design.
+The residual-value model computes a vehicle's residual as the product of (1 − depreciation rate) over each year of its life. For a vehicle with a 4-year life depreciating 9% a year, the residual value is 0.91⁴ = 68.6% of MSRP. Residual value is credited against cost, so this refinement lowers total cost of ownership, and it applies to every design the optimizer evaluates as well as to direct TCO runs.
 
-Across the demo analyses in `T3COConfig.csv`, discounted TCO falls by 2.7% to 18.2% in 2.1. **Results produced with 2.0.x are not comparable with 2.1 and should be regenerated.**
+Across the demo analyses in `T3COConfig.csv`, discounted TCO is 2.7% to 18.2% lower in 2.1 than in 2.0. **When comparing against 2.1 results, rerun earlier analyses with 2.1.**
 
 ### Visualization Module
 
@@ -31,20 +31,20 @@ t3co_summarize --results-dir results/ --out results/summary.csv
 
 ### Faster, reproducible optimization
 
-- **NSGA2 matches T3CO 1.x.** The population is again seeded with Latin Hypercube sampling, as in 1.0.11, rather than pymoo's uniform random default.
-- **Convergence now ends the run.** `--n-last` and `--nth-gen` (Config `n_last`, `nth_gen`) are passed to the optimizer; previously they were ignored and no run could stop before generation 50. The demo optimization (`--analysis-id=1`) drops from 57 generations (about 35 s) to 14 generations (about 10 s), and arrives at the same design (a 297 kW engine).
-- **Reproducible results.** The optimizer no longer leaves state behind between design evaluations, so identical designs score identically, serial and parallel runs agree exactly, and a run repeats exactly.
-- **Batch mode with optimization.** `--run-multi` now works for analyses that optimize; it previously aborted with `daemonic processes are not allowed to have children`.
-- **Standalone optimizer.** `python -m t3co.optimize.optimization` loads an analysis through new `--config` and `--analysis-id` options and matches the sweep module's results. It previously hung in its default parallel mode and, when run serially, silently used defaults that matched no analysis.
-- **New CLI options.** `--n-processes` sets the optimizer's process count and `--no-parallel` evaluates designs serially; serial evaluation previously failed outright.
-- **Range constraint.** Enabling `constraint_range` no longer aborts the run on the first generation.
+- **Latin Hypercube sampling.** NSGA2 seeds its population with Latin Hypercube sampling, as in T3CO 1.x, spreading the initial designs evenly across the knob bounds.
+- **Convergence-based stopping.** The optimizer stops once the design and objective tolerances have held for `--n-last` generations, checked every `--nth-gen` generations (Config `n_last`, `nth_gen`). The demo optimization (`--analysis-id=1`) now finishes in 14 generations (about 10 s), down from 57 (about 35 s), and arrives at the same design, a 297 kW engine.
+- **Reproducible results.** Each design evaluation is independent of the ones before it, so identical designs score identically, serial and parallel runs agree exactly, and repeated runs match.
+- **Optimization in batch mode.** `--run-multi` supports analyses that optimize: selections run in parallel, and each optimization evaluates its designs within its own worker.
+- **Standalone optimizer.** `python -m t3co.optimize.optimization` loads an analysis through the new `--config` and `--analysis-id` options, runs in parallel or serially, and matches the sweep module's results.
+- **Parallelism controls.** `--n-processes` sets how many processes evaluate each generation's designs, and `--no-parallel` evaluates them one at a time.
+- **Range constraint.** `constraint_range` can be enabled alongside the acceleration and gradeability constraints.
 
 ### Other changes
 
 - New Ledger output `total_purchasing_payment_dol`: the discounted loan or lease payments included in TCO, so loan and lease results can be decomposed.
-- CLI overrides written as `--flag=value` are now honored; previously only `--flag value` took effect. An absolute `--dst-dir` that does not yet exist is created.
-- The EIA API key is no longer written to logs or error messages when a request fails.
-- `t3co.__version__` reports the installed version; it previously always reported `0.0.1`.
+- CLI overrides accept both the `--flag=value` and `--flag value` forms, and an absolute `--dst-dir` is created if it does not exist yet.
+- EIA API keys are redacted from log and error messages.
+- `t3co.__version__` reports the installed package version.
 - The `fastsim` extra is constrained to `>=2.1.1,<2.1.3` to stay compatible with NumPy 1.x.
 
 ## T3CO 2.0
