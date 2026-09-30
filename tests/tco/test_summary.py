@@ -1,0 +1,195 @@
+import numpy as np
+import pandas as pd
+import pytest
+
+from t3co.tco.summary import (
+    compute_weights,
+    discover_latest_results,
+    load_results,
+    main,
+    parse_group_by,
+    summarize_results,
+    weighted_mean,
+    write_results_summary,
+)
+
+
+def write_result(directory, ts, suffix, rows):
+    name = f"results_{ts}_{suffix}.csv" if suffix else f"results_{ts}.csv"
+    path = directory / name
+    pd.DataFrame(rows).to_csv(path, index=False)
+    return path
+
+
+@pytest.fixture
+def results_dir(tmp_path):
+    write_result(
+        tmp_path,
+        "2026-01-01_10-00-00",
+        "fleetA_diesel",
+        [{"discounted_tco_dol": 999.0, "total_vmt": 1.0}],
+    )
+    write_result(
+        tmp_path,
+        "2026-01-02_10-00-00",
+        "fleetA_diesel",
+        [
+            {"discounted_tco_dol": 100.0, "total_vmt": 10.0, "mpgge": 5.0},
+            {"discounted_tco_dol": 300.0, "total_vmt": 30.0, "mpgge": 7.0},
+        ],
+    )
+    write_result(
+        tmp_path,
+        "2026-01-01_10-00-00",
+        "fleetA_BEV",
+        [{"discounted_tco_dol": 200.0, "total_vmt": 20.0, "mpgge": 20.0}],
+    )
+    (tmp_path / "notes.csv").write_text("a\n1\n")
+    (tmp_path / "results_bad-name.csv").write_text("a\n1\n")
+    return tmp_path
+
+
+def test_discover_latest_results_keeps_newest_per_suffix(results_dir):
+    found = discover_latest_results(results_dir)
+    assert list(found) == ["fleetA_BEV", "fleetA_diesel"]
+    assert found["fleetA_diesel"].name.startswith("results_2026-01-02")
+
+
+def test_discover_latest_results_handles_missing_suffix(tmp_path):
+    write_result(tmp_path, "2026-01-01_10-00-00", "", [{"a": 1}])
+    assert list(discover_latest_results(tmp_path)) == [""]
+
+
+def test_load_results_from_dir_and_paths(results_dir):
+    df = load_results(results_dir)
+    assert len(df) == 3
+    assert set(df["result_suffix"]) == {"fleetA_BEV", "fleetA_diesel"}
+
+    paths = list(discover_latest_results(results_dir).values())
+    assert load_results(paths).equals(df)
+
+
+def test_load_results_empty_dir_raises(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        load_results(tmp_path)
+
+
+def test_load_results_missing_path_raises(tmp_path):
+    with pytest.raises(FileNotFoundError, match="not found"):
+        load_results(tmp_path / "missing")
+
+
+def test_compute_weights():
+    assert compute_weights(pd.Series([1.0, 3.0])).tolist() == [0.25, 0.75]
+    assert compute_weights(pd.Series([-1.0, 2.0])).tolist() == [0.0, 1.0]
+    assert compute_weights(pd.Series([0.0, 0.0])).tolist() == [0.5, 0.5]
+
+
+def test_weighted_mean_and_fallbacks():
+    df = pd.DataFrame({"v": [100.0, 300.0, np.nan], "w": [10.0, 30.0, 5.0]})
+    assert weighted_mean(df, "v", "w") == pytest.approx(250.0)
+
+    zero = pd.DataFrame({"v": [100.0, 300.0], "w": [0.0, 0.0]})
+    assert weighted_mean(zero, "v", "w") == pytest.approx(200.0)
+
+    empty = pd.DataFrame({"v": [np.nan], "w": [1.0]})
+    assert np.isnan(weighted_mean(empty, "v", "w"))
+
+
+def test_summarize_results(results_dir):
+    summary = summarize_results(load_results(results_dir)).set_index("result_suffix")
+
+    diesel = summary.loc["fleetA_diesel"]
+    assert diesel["n_runs"] == 2
+    assert diesel["median_discounted_tco_dol"] == pytest.approx(200.0)
+    assert diesel["weighted_mean_discounted_tco_dol"] == pytest.approx(250.0)
+    assert diesel["weighted_mean_mpgge"] == pytest.approx(6.5)
+    # (100*0.25 + 300*0.75) / (10*0.25 + 30*0.75)
+    assert diesel["tco_dol_per_mi"] == pytest.approx(10.0)
+
+    # Metrics absent from the results are skipped rather than filled.
+    assert "median_msrp_total_dol" not in summary.columns
+
+
+def test_summarize_results_options(results_dir):
+    df = load_results(results_dir)
+    df["fleet"] = df["result_suffix"].str.split("_").str[0]
+
+    summary = summarize_results(
+        df, group_cols=["fleet"], metrics=["discounted_tco_dol"], stats=["median"]
+    )
+    assert summary.columns.tolist() == [
+        "fleet",
+        "n_runs",
+        "median_discounted_tco_dol",
+        "tco_dol_per_mi",
+    ]
+    assert summary.loc[0, "n_runs"] == 3
+
+    with pytest.raises(ValueError):
+        summarize_results(df, stats=["mean"])
+    with pytest.raises(KeyError):
+        summarize_results(df, group_cols=["missing"])
+    with pytest.raises(KeyError):
+        summarize_results(df, weight_col="missing")
+
+
+def test_main_writes_csv(results_dir, tmp_path, capsys):
+    out = tmp_path / "out" / "summary.csv"
+    summary = main(["--results-dir", str(results_dir), "--out", str(out)])
+
+    assert out.exists()
+    written = pd.read_csv(out)
+    assert written["result_suffix"].tolist() == summary["result_suffix"].tolist()
+    assert "fleetA_diesel" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        (None, None),
+        (np.nan, None),
+        ("", None),
+        ("vehicle_veh_pt_type", ["vehicle_veh_pt_type"]),
+        ("a; b", ["a", "b"]),
+        ("a,b", ["a", "b"]),
+        ("['a', 'b']", ["a", "b"]),
+        (["a", "b"], ["a", "b"]),
+    ],
+)
+def test_parse_group_by(value, expected):
+    assert parse_group_by(value) == expected
+
+
+def test_write_results_summary_next_to_results(results_dir):
+    results_path = discover_latest_results(results_dir)["fleetA_diesel"]
+    summary_path = write_results_summary(results_path, group_cols=["mpgge"])
+
+    assert summary_path == results_path.with_name(f"summary_{results_path.name}")
+    assert pd.read_csv(summary_path)["n_runs"].tolist() == [1, 1]
+    # Summary files must not be picked up as results by later discovery.
+    assert summary_path not in discover_latest_results(results_dir).values()
+
+
+def test_written_summary_is_rounded(tmp_path):
+    results_path = write_result(
+        tmp_path,
+        "2026-01-01_10-00-00",
+        "fleetA",
+        [
+            {"fleet": "A", "discounted_tco_dol": 100.004, "total_vmt": 1.0, "mpgge": 6.12345},
+            {"fleet": "A", "discounted_tco_dol": 1 / 3, "total_vmt": 2.0, "mpgge": 7.0},
+        ],
+    )
+    cli_out = tmp_path / "cli_summary.csv"
+    printed = main(["--results-dir", str(tmp_path), "--out", str(cli_out)])
+    sweep_out = write_results_summary(results_path, group_cols=["fleet"])
+
+    for frame in [printed, pd.read_csv(cli_out), pd.read_csv(sweep_out)]:
+        numeric = frame.select_dtypes("number")
+        assert (numeric == numeric.round(2)).all().all()
+    assert pd.read_csv(sweep_out).loc[0, "median_mpgge"] == pytest.approx(6.56)
+
+    # The Python API keeps full precision.
+    unrounded = summarize_results(pd.read_csv(results_path), group_cols=["fleet"])
+    assert unrounded.loc[0, "median_mpgge"] == pytest.approx(6.561725)
