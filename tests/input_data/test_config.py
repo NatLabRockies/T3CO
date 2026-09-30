@@ -287,3 +287,27 @@ def test_delete_dataframes():
     config.df_attr = pd.DataFrame({"A": [1, 2, 3]})
     config.delete_dataframes()
     assert not hasattr(config, "df_attr")
+
+
+def test_config_from_csv_survives_a_pickle_round_trip():
+    """Every optimizer pool worker unpickles the Config, so it must survive that.
+
+    Config.__setstate__ re-reads the auxiliary files on unpickle, so a Config
+    whose file paths are still at their placeholder defaults raises inside each
+    worker. Pool then replaces the dead worker, the replacement dies the same
+    way, and the run hangs with no error rather than failing.
+    """
+    import pickle
+
+    from t3co.input_data.config import Config
+
+    config = Config()
+    config.from_csv(filename=str(Config().config_filename), analysis_id=1)
+    config.check_drivecycles_and_create_selections()
+    config.read_auxiliary_files()
+
+    restored = pickle.loads(pickle.dumps(config))
+
+    assert restored.analysis_id == config.analysis_id
+    assert restored.cost_toggles is not None
+    assert restored.fuel_prices_df is not None

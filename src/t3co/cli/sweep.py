@@ -9,7 +9,7 @@ import shutil
 import tempfile
 import time
 from functools import partial
-from multiprocessing import Pool
+from multiprocessing import Pool, current_process
 from pathlib import Path
 from typing import Dict, List, Tuple, Union
 
@@ -89,6 +89,13 @@ def apply_cli_overrides(config: Config, args, argv: list[str] | None = None) -> 
         (("--pop-size",), "pop_size", int(args.pop_size)),
         (("--nth-gen",), "nth_gen", args.nth_gen),
         (("--n-last",), "n_last", args.n_last),
+        # getattr keeps apply_cli_overrides usable with argparse namespaces
+        # built before this flag existed.
+        (
+            ("--n-processes",),
+            "n_processes",
+            int(getattr(args, "n_processes", config.n_processes)),
+        ),
     ]
 
     for flags, attr_name, value in override_specs:
@@ -106,6 +113,9 @@ def apply_cli_overrides(config: Config, args, argv: list[str] | None = None) -> 
 
     if _argument_was_provided(argv, "--summary-group-by"):
         config.summary_group_by = args.summary_group_by
+
+    if _argument_was_provided(argv, "--no-parallel"):
+        config.parallel = False
 
     return config
 
@@ -139,6 +149,8 @@ def _build_optimization_termination(config: Config):
         x_tol=float(config.x_tol),
         f_tol=float(config.f_tol),
         n_max_gen=int(config.n_max_gen),
+        n_last=int(config.n_last),
+        nth_gen=int(config.nth_gen),
     )
 
 
@@ -260,10 +272,26 @@ def generate_ledger(selection: int, config: Config) -> Dict:
     )
 
 
+def _population_pool_is_available() -> bool:
+    """Whether this process may open a pool to evaluate an NSGA2 population.
+
+    T3CO has two independent levels of multiprocessing: ``--run-multi``
+    parallelizes across selections, and ``config.parallel`` parallelizes the
+    population inside a single optimization. Under ``--run-multi`` each
+    selection already runs in a daemonic pool worker, and daemonic processes
+    may not start children, so opening the inner pool there raises
+    "AssertionError: daemonic processes are not allowed to have children".
+
+    The selections are already saturating the CPUs in that case, so the inner
+    pool would buy nothing even if it were permitted.
+    """
+    return not current_process().daemon
+
+
 def run_optimization(vehicle: Vehicle, scenario: Scenario, config: Config):
     pool = None
     runner = None
-    if config.parallel:
+    if config.parallel and _population_pool_is_available():
         pool = Pool(config.n_processes)
         runner = StarmapParallelization(pool.starmap)
 
@@ -846,6 +874,17 @@ if __name__ == "__main__":
         default=5,
         type=int,
         help="Number of generations to look back for establishing convergence during optimization",
+    )
+    parser.add_argument(
+        "--n-processes",
+        default=9,
+        type=int,
+        help="Number of processes used to evaluate an NSGA2 population within a single optimization",
+    )
+    parser.add_argument(
+        "--no-parallel",
+        action="store_true",
+        help="Evaluate each NSGA2 population serially instead of in a process pool",
     )
     parser.add_argument(
         "--range-overshoot-tol",

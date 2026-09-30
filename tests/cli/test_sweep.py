@@ -9,6 +9,7 @@ from t3co.cli.sweep import (
     _argument_was_provided,
     _build_optimization_algorithm,
     _build_optimization_termination,
+    _population_pool_is_available,
     apply_cli_overrides,
     create_results_filepath,
     export_results_to_csv,
@@ -299,6 +300,81 @@ def test_build_optimization_settings_use_config_values(config):
     assert termination.criteria[2].termination.tol == pytest.approx(0.025)
     assert termination.max_gen.n_max_gen == 33
 
+    # n_last/nth_gen are T3CO's names for pymoo's period/n_skip. Left unset,
+    # pymoo defaults them to 50/5 and no convergence check can fire before
+    # generation 50.
+    for criterion in (termination.x, termination.cv, termination.f):
+        assert criterion.history.size == 6
+        assert criterion.termination.n_skip == 1
+
+
+def test_build_optimization_algorithm_uses_latin_hypercube_sampling(config):
+    """NSGA2 is seeded the way T3CO v1.0.11 seeded it."""
+    config.algorithms = ["NSGA2"]
+
+    algorithm = _build_optimization_algorithm(config)
+
+    assert (
+        algorithm.initialization.sampling.__class__.__name__
+        == "LatinHypercubeSampling"
+    )
+
+
+def test_apply_cli_overrides_updates_optimizer_parallelism(config):
+    args = SimpleNamespace(
+        vehicles=None,
+        scenarios=None,
+        eng_curves=None,
+        lw_curves=None,
+        aero_curves=None,
+        dst_dir=None,
+        algorithms=None,
+        x_tol=None,
+        f_tol=None,
+        n_max_gen=1000,
+        pop_size=25,
+        nth_gen=1,
+        n_last=5,
+        n_processes=4,
+        selections=None,
+        drive_cycle=None,
+    )
+
+    apply_cli_overrides(
+        config=config,
+        args=args,
+        argv=["--n-processes", "--no-parallel"],
+    )
+
+    assert config.n_processes == 4
+    assert config.parallel is False
+
+
+def test_apply_cli_overrides_leaves_parallelism_alone_by_default(config):
+    args = SimpleNamespace(
+        vehicles=None,
+        scenarios=None,
+        eng_curves=None,
+        lw_curves=None,
+        aero_curves=None,
+        dst_dir=None,
+        algorithms=None,
+        x_tol=None,
+        f_tol=None,
+        n_max_gen=1000,
+        pop_size=25,
+        nth_gen=1,
+        n_last=5,
+        n_processes=4,
+        selections=None,
+        drive_cycle=None,
+    )
+
+    apply_cli_overrides(config=config, args=args, argv=[])
+
+    assert config.n_processes == 9
+    assert config.parallel is True
+
 
 def test_load_vehicle_scenario_energy_no_fastsim_missing_data(
     config, vehicle, scenario
@@ -372,3 +448,22 @@ def test_apply_cli_overrides_summary_group_by(config):
     )
     apply_cli_overrides(config=config, args=args, argv=["--summary-group-by"])
     assert config.summary_group_by == ["scenario_model_year"]
+
+
+def test_population_pool_is_available_in_main_process():
+    """The optimizer may open its own pool when the sweep is not already pooled."""
+    assert _population_pool_is_available() is True
+
+
+def test_population_pool_is_unavailable_inside_a_pool_worker():
+    """Under --run-multi the optimizer must not try to open a nested pool.
+
+    generate_ledger runs in a daemonic worker there, and daemonic processes may
+    not start children, so opening the inner pool raises
+    "AssertionError: daemonic processes are not allowed to have children" and
+    aborts the whole sweep.
+    """
+    from multiprocessing import Pool
+
+    with Pool(processes=1) as pool:
+        assert pool.apply(_population_pool_is_available) is False

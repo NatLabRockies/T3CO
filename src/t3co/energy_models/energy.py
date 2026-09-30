@@ -109,17 +109,23 @@ class Energy:
                 "FASTSim is not installed or could not be imported. Cannot run acceleration test."
             )
 
+        original_veh_kg = vehicle.veh_kg
         if set_weight_to_max_kg:
             vehicle.veh_kg = scenario.gvwr_kg + scenario.gvwr_credit_kg
 
         accel_cycle = RunFASTSim.get_accel_cycle()
 
-        fastsim_run = RunFASTSim(
-            scenario=scenario,
-            t3co_vehicle=vehicle,
-            veh_no=vehicle.selection,
-            cycle=accel_cycle,
-        )
+        try:
+            fastsim_run = RunFASTSim(
+                scenario=scenario,
+                t3co_vehicle=vehicle,
+                veh_no=vehicle.selection,
+                cycle=accel_cycle,
+            )
+        finally:
+            # The test is run at GVWR, but the caller's vehicle must keep its
+            # own mass: the optimizer reuses one Vehicle across evaluations.
+            vehicle.veh_kg = original_veh_kg
 
         simdrive = fastsim_run.simdrives
 
@@ -153,25 +159,31 @@ class Energy:
                 "FASTSim is not installed or could not be imported. Cannot run gradeability test."
             )
 
+        original_veh_kg = vehicle.veh_kg
         if set_weight_to_max_kg:
             vehicle.veh_kg = scenario.gvwr_kg + scenario.gvwr_credit_kg
 
-        # 6% Grade
-        grade_6_cycle = RunFASTSim.get_grade_cycle(0.06, scenario)
-        fastsim_run_6 = RunFASTSim(
-            scenario=scenario,
-            t3co_vehicle=vehicle,
-            veh_no=vehicle.selection,
-            cycle=grade_6_cycle,
-        )
-        self.grade_6_mph_ach = fastsim_run_6.simdrives.mph_ach[-1]
+        try:
+            # 6% Grade
+            grade_6_cycle = RunFASTSim.get_grade_cycle(0.06, scenario)
+            fastsim_run_6 = RunFASTSim(
+                scenario=scenario,
+                t3co_vehicle=vehicle,
+                veh_no=vehicle.selection,
+                cycle=grade_6_cycle,
+            )
+            self.grade_6_mph_ach = fastsim_run_6.simdrives.mph_ach[-1]
 
-        # 1.25% Grade
-        grade_125_cycle = RunFASTSim.get_grade_cycle(0.0125, scenario)
-        fastsim_run_125 = RunFASTSim(
-            scenario=scenario,
-            t3co_vehicle=vehicle,
-            veh_no=vehicle.selection,
-            cycle=grade_125_cycle,
-        )
-        self.grade_1_25_mph_ach = fastsim_run_125.simdrives.mph_ach[-1]
+            # 1.25% Grade
+            grade_125_cycle = RunFASTSim.get_grade_cycle(0.0125, scenario)
+            fastsim_run_125 = RunFASTSim(
+                scenario=scenario,
+                t3co_vehicle=vehicle,
+                veh_no=vehicle.selection,
+                cycle=grade_125_cycle,
+            )
+            self.grade_1_25_mph_ach = fastsim_run_125.simdrives.mph_ach[-1]
+        finally:
+            # The tests are run at GVWR, but the caller's vehicle must keep its
+            # own mass: the optimizer reuses one Vehicle across evaluations.
+            vehicle.veh_kg = original_veh_kg

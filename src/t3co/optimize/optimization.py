@@ -6,7 +6,8 @@ from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.algorithms.soo.nonconvex.nelder import NelderMead
 from pymoo.algorithms.soo.nonconvex.pattern import PatternSearch
 from pymoo.algorithms.soo.nonconvex.pso import PSO
-from pymoo.core.problem import ElementwiseProblem
+from pymoo.core.problem import ElementwiseProblem, LoopedElementwiseEvaluation
+from pymoo.operators.sampling.lhs import LatinHypercubeSampling as LHS
 
 try:
     from pymoo.parallelization.starmap import StarmapParallelization
@@ -135,13 +136,23 @@ class VehicleDesignOpt(ElementwiseProblem):
             if scenario.min_speed_at_1p25pct_grade_in_5min_mph > 0:
                 n_ieq_constr += 1
 
+        if scenario.constraint_range:
+            # Must mirror the range constraint appended in _evaluate.
+            if scenario.target_range_mi > 0:
+                n_ieq_constr += 1
+
         super().__init__(
             n_var=n_var,
             n_obj=1,
             n_ieq_constr=n_ieq_constr,
             xl=xl,
             xu=xu,
-            elementwise_runner=runner,
+            # pymoo's own default is LoopedElementwiseEvaluation(); passing
+            # runner through when it is None would replace that default with
+            # None and make every evaluation raise TypeError.
+            elementwise_runner=(
+                runner if runner is not None else LoopedElementwiseEvaluation()
+            ),
         )
 
     def apply_design_variables(self, x, vehicle=None):
@@ -234,15 +245,23 @@ class VehicleDesignOpt(ElementwiseProblem):
             out["G"] = g
 
 
-def build_algorithm(algo: str, pop_size: int = 25):
+def build_algorithm(algo: str, pop_size: int = 25, sampling=None):
     """Build a pymoo algorithm by name.
 
     Supported algorithms mirror T3CO 1.x: NSGA2, PatternSearch,
     NelderMead, and PSO.
+
+    NSGA2 is seeded with Latin Hypercube sampling to match T3CO v1.0.11
+    (``t3co/moopack/moo.py``); pymoo's own default is uniform random
+    sampling, which spreads the initial population less evenly.
     """
     name = algo.upper() if algo else "NSGA2"
     if name == "NSGA2":
-        return NSGA2(pop_size=pop_size, eliminate_duplicates=True)
+        return NSGA2(
+            pop_size=pop_size,
+            eliminate_duplicates=True,
+            sampling=sampling if sampling is not None else LHS(),
+        )
     if name == "PATTERNSEARCH":
         return PatternSearch()
     if name == "NELDERMEAD":
@@ -260,26 +279,63 @@ def build_termination(
     f_tol: float = 0.001,
     n_max_gen: int = 1000,
     n_max_evals: int = None,
+    n_last: int = 5,
+    nth_gen: int = 1,
 ):
     """Build termination using ``MODT`` (pymoo multi-objective default
-    termination), matching the T3CO 1.x approach."""
+    termination), matching the T3CO 1.x approach.
+
+    ``n_last`` and ``nth_gen`` are T3CO's names for pymoo's ``period`` and
+    ``n_skip``: ``period`` is how many recent generations must all look
+    converged before the run stops, and ``n_skip`` is how many generations are
+    skipped between convergence checks. pymoo defaults them to 50 and 5, and
+    ``RobustTermination`` seeds its sliding window with zeros, so leaving them
+    unset imposes a hard floor of 50 generations no matter how quickly the
+    search settles.
+    """
     return MODT(
         xtol=x_tol,
         ftol=f_tol,
         n_max_gen=n_max_gen,
         n_max_evals=n_max_evals,
+        period=n_last,
+        n_skip=max(nth_gen - 1, 0),
     )
 
 
-def run_optimization(selection, parallel=True, n_processes=4):
+def run_optimization(
+    selection,
+    parallel=True,
+    n_processes=4,
+    config_file=None,
+    analysis_id=1,
+):
+    """Optimize one Vehicle-Scenario pair and report the cheapest design.
+
+    The analysis is loaded from a Config CSV rather than from ``Config()``
+    defaults. Several of those defaults are placeholders that only
+    ``from_csv`` fills in — ``fuel_prices_file`` is the empty string, for
+    instance — and ``Config.__setstate__`` re-reads the auxiliary files on
+    every unpickle. A Config built from the defaults therefore raises inside
+    each pool worker as it is unpickled; ``Pool`` silently replaces the dead
+    worker, the replacement dies the same way, and the run hangs forever
+    instead of reporting the error.
+    """
     config = Config()
+    config.from_csv(
+        filename=str(config_file or config.config_filename),
+        analysis_id=analysis_id,
+    )
     config.skip_all_opt = False
     config.selections = [selection]
+    config.check_drivecycles_and_create_selections()
+    config.read_auxiliary_files()
     vehicle = Vehicle().from_config(selection=selection, config=config)
     vehicle.set_veh_kg()
     scenario = Scenario().from_csv(
         selection=selection, scenario_file=config.scenario_file
     )
+    scenario.override_from_config(config=config)
     config.vehicle_life_yr = scenario.vehicle_life_yr
 
     pool = None
@@ -297,6 +353,8 @@ def run_optimization(selection, parallel=True, n_processes=4):
             x_tol=float(config.x_tol),
             f_tol=float(config.f_tol),
             n_max_gen=int(config.n_max_gen),
+            n_last=int(config.n_last),
+            nth_gen=int(config.nth_gen),
         )
 
         res = minimize(
@@ -342,10 +400,21 @@ if __name__ == "__main__":
     parser.add_argument(
         "--n-processes", type=int, default=9, help="Number of processes."
     )
+    parser.add_argument(
+        "--config", default=None, help="Input Config file"
+    )
+    parser.add_argument(
+        "--analysis-id",
+        type=int,
+        default=1,
+        help="Analysis key from input Config file - 'config.analysis_id'",
+    )
     args = parser.parse_args()
 
     run_optimization(
         selection=args.selection,
         parallel=not args.no_parallel,
         n_processes=args.n_processes,
+        config_file=args.config,
+        analysis_id=args.analysis_id,
     )

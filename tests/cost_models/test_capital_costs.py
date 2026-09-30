@@ -180,6 +180,28 @@ def test_set_residual_cost(vehicle, scenario):
     assert capital_costs.residual_cost_dol == pytest.approx(-18847.74, 0.01)
 
 
+def test_set_residual_cost_is_idempotent(vehicle, scenario):
+    """A reused Scenario must not accumulate depreciation.
+
+    The optimizer evaluates hundreds of designs against one Scenario, so a
+    residual rate that compounds per call makes the objective drift.
+    """
+    capital_costs = CapitalCosts.__new__(
+        CapitalCosts, vehicle=vehicle, scenario=scenario
+    )
+    capital_costs.msrp_total_dol = 48400.0
+
+    capital_costs.set_residual_cost(scenario=scenario)
+    first = capital_costs.residual_cost_dol
+    first_rate = scenario.residual_rate_pct
+
+    for _ in range(3):
+        capital_costs.set_residual_cost(scenario=scenario)
+
+    assert capital_costs.residual_cost_dol == pytest.approx(first)
+    assert scenario.residual_rate_pct == pytest.approx(first_rate)
+
+
 def test_set_net_capital_cost(vehicle, scenario):
     capital_costs = CapitalCosts.__new__(
         CapitalCosts, vehicle=vehicle, scenario=scenario

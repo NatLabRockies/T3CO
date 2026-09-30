@@ -361,7 +361,10 @@ class CapitalCosts:
             scenario (Scenario): The scenario instance containing configuration data, including depreciation rates and vehicle life span.
         """
 
-        scenario.residual_rate_pct *= np.prod(
+        # Assignment, not accumulation: residual_rate_pct is derived from the
+        # depreciation rates, not a scenario input, so compounding it corrupts
+        # every reuse of the same Scenario.
+        scenario.residual_rate_pct = np.prod(
             [
                 (1 - scenario.depreciation_rates_pct_per_yr[i])
                 for i in range(scenario.vehicle_life_yr)
