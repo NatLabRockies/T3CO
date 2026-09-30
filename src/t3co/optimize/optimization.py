@@ -1,3 +1,12 @@
+"""Powertrain optimization for minimum total cost of ownership.
+
+``VehicleDesignOpt`` poses the sizing of a vehicle's powertrain as a pymoo
+problem, and ``build_algorithm`` and ``build_termination`` configure the
+solver from Config settings. The sweep module calls these for every selection
+in an optimizing analysis; ``python -m t3co.optimize.optimization`` runs a
+single selection on its own and prints the best design.
+"""
+
 import argparse
 
 import numpy as np

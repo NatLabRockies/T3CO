@@ -1,3 +1,11 @@
+"""Command-line entry point that runs a T3CO analysis.
+
+``python -m t3co.cli.sweep --analysis-id=<id>`` loads an analysis from the
+Config file, computes a Ledger for every selected Vehicle-Scenario pair
+(optimizing the powertrain first when the analysis asks for it), and writes
+the results CSV, plus optional charts and a grouped summary.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -73,6 +81,21 @@ def _argument_was_provided(argv: list[str], *flags: str) -> bool:
 
 
 def apply_cli_overrides(config: Config, args, argv: list[str] | None = None) -> Config:
+    """Apply command-line settings that were explicitly given onto a Config.
+
+    Only flags present in ``argv`` override the Config, in either the
+    ``--flag value`` or the ``--flag=value`` form, so values loaded from the
+    Config file are kept unless the user passed the matching flag.
+
+    Args:
+        config (Config): Config to update.
+        args (argparse.Namespace): Parsed command-line arguments.
+        argv (list[str] | None, optional): Raw command-line tokens, used to
+            tell which flags were given. Defaults to None (no overrides).
+
+    Returns:
+        Config: The same Config, updated in place.
+    """
     argv = [] if argv is None else argv
 
     override_specs = [
@@ -288,7 +311,23 @@ def _population_pool_is_available() -> bool:
     return not current_process().daemon
 
 
-def run_optimization(vehicle: Vehicle, scenario: Scenario, config: Config):
+def run_optimization(vehicle: Vehicle, scenario: Scenario, config: Config) -> tuple:
+    """Optimize the powertrain of one Vehicle-Scenario pair.
+
+    Each generation's designs are evaluated in a pool of
+    ``config.n_processes`` processes when ``config.parallel`` is set and this
+    process may start one, and serially otherwise, for example inside a
+    ``--run-multi`` worker. Both paths produce identical results.
+
+    Args:
+        vehicle (Vehicle): Vehicle whose powertrain is sized.
+        scenario (Scenario): Scenario supplying knob bounds and constraints.
+        config (Config): Analysis configuration, including the algorithm and
+            convergence settings.
+
+    Returns:
+        tuple: ``(optimized_vehicle, optimized_energy)`` for the best design found.
+    """
     pool = None
     runner = None
     if config.parallel and _population_pool_is_available():
