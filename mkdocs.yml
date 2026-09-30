@@ -66,6 +66,10 @@ theme:
     edit: material/pencil 
     view: material/eye
     
+# Rebuild the local preview (mkdocs serve) when docstrings change.
+watch:
+  - src
+
 nav:
     - Home: index.md
     - What's New: whats_new.md
