@@ -1,23 +1,27 @@
 # Vehicle Input Descriptions
 
 <div class="filter-container">
-    <span><strong>Filter Options: Units:</strong></span>
-    <select id="unitsFilter"><option value="">All</option>
-    </select>
-    <span><strong>Powertrain:</strong></span>
-    <select id="powertrainFilter">
-        <option value="">All</option>
-        <option value="Conv">Conv</option>
-        <option value="BEV">BEV</option>
-        <option value="HEV">HEV</option>
-        <option value="FCEV">FCEV</option>
-    </select>
-    <span><strong>Data Type:</strong></span>
-    <select id="datatypeFilter"><option value="">All</option></select>
-    <div class="button-container">
+    <span class="filter-label"><strong>Filter Options</strong></span>
+    <span class="filter-item"><strong>Units:</strong>
+        <select id="unitsFilter"><option value="">All</option></select>
+    </span>
+    <span class="filter-item"><strong>Powertrain:</strong>
+        <select id="powertrainFilter">
+            <option value="">All</option>
+            <option value="Conv">Conv</option>
+            <option value="BEV">BEV</option>
+            <option value="HEV">HEV</option>
+            <option value="FCEV">FCEV</option>
+        </select>
+    </span>
+    <span class="filter-item"><strong>Data Type:</strong>
+        <select id="datatypeFilter"><option value="">All</option></select>
+    </span>
+    <span class="button-container">
         <button id="downloadTemplateBtn">Download Vehicle Template</button>
-    </div>
+    </span>
 </div>
+
 <div class="table-container">
     <table id="vehicleTable">
     <thead>

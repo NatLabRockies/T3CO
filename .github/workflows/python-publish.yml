@@ -2,12 +2,16 @@ name: Build
 
 on:
   workflow_dispatch:
-  release:
-    types: [published]
   push:
     branches:
       - main
       - ci
+    # Pushing a version tag (e.g. v2.1.0) runs the tests, builds, publishes to
+    # PyPI, and creates the GitHub release. There is deliberately no
+    # `release: published` trigger: creating a release in the web UI pushes its
+    # tag, so both triggers would fire and publish twice.
+    tags:
+      - "v*.*.*"
   pull_request:
     branches:
       - "*"
@@ -66,13 +70,24 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'release'
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write  # to create the GitHub release
     steps:
       - name: Download a distribution artifact
         uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist
+
+      - name: Check the tag matches the package version
+        run: |
+          VERSION=$(ls dist/*.whl | sed -E 's|.*/t3co-([^-]+)-.*|\1|')
+          if [ "${GITHUB_REF_NAME}" != "v${VERSION}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match version ${VERSION} in pyproject.toml. Bump the version and tag v${VERSION}."
+            exit 1
+          fi
+          echo "Publishing t3co ${VERSION} from tag ${GITHUB_REF_NAME}"
 
       - name: Use Python 3.12
         uses: actions/setup-python@v5
@@ -83,18 +98,49 @@ jobs:
         run: pip install twine
 
       - name: Publish distribution 📦 to Test PyPI
-        run: twine upload -r testpypi dist/*
+        # --skip-existing keeps a re-run idempotent if a later step failed
+        # after this upload succeeded.
+        run: twine upload --skip-existing -r testpypi dist/*
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.test_pypi_password }}
 
       - name: Install t3co from Test PyPI and verify import
         run: |
-          pip install --no-cache-dir --extra-index-url https://test.pypi.org/simple/ t3co==2.0.0
-          python -c "import t3co; print('t3co', t3co.__version__, 'installed successfully')"
+          # Verify the exact version that was just built, not a fixed one.
+          VERSION=$(ls dist/*.whl | sed -E 's|.*/t3co-([^-]+)-.*|\1|')
+          echo "Verifying t3co==${VERSION} from Test PyPI"
+          # Test PyPI can take a moment to serve a new upload.
+          for attempt in 1 2 3 4 5; do
+            pip install --no-cache-dir \
+              --index-url https://test.pypi.org/simple/ \
+              --extra-index-url https://pypi.org/simple/ \
+              "t3co==${VERSION}" && break
+            if [ "$attempt" = 5 ]; then exit 1; fi
+            echo "t3co==${VERSION} not available yet (attempt ${attempt}/5); retrying in 30s"
+            sleep 30
+          done
+          python -c "import sys, t3co; assert t3co.__version__ == sys.argv[1], (t3co.__version__, sys.argv[1]); print('t3co', t3co.__version__, 'installed successfully')" "${VERSION}"
 
       - name: Publish distribution 📦 to PyPI
-        run: twine upload -r pypi dist/*
+        # --skip-existing lets a re-run finish the release if a later step
+        # failed after this upload succeeded.
+        run: twine upload --skip-existing -r pypi dist/*
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.pypi_password }}
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" > /dev/null 2>&1; then
+            echo "GitHub release ${GITHUB_REF_NAME} already exists"
+            exit 0
+          fi
+          gh release create "${GITHUB_REF_NAME}" dist/* \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "${GITHUB_REF_NAME}" \
+            --verify-tag \
+            --notes "See [What's New](https://natlabrockies.github.io/T3CO/whats_new/) for the changes in this release. Install it with \`pip install t3co==${GITHUB_REF_NAME#v}\`."
+

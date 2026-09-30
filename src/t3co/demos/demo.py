@@ -1,4 +1,18 @@
 # %%
+"""
+Demo of computing TCO directly with T3CO's classes, without the sweep CLI.
+
+Loads selection 1 from the bundled demo Vehicle and Scenario files and supplies
+fixed energy values (4.0 mpgge and a 200-mile range) in place of a FASTSim run.
+It prints the ``TCOCalc`` for year index 3 (the fourth year), then builds the
+full ``Ledger``, prints it as a flat dictionary, and writes it to
+``results/save_dict.json`` and ``results/save_csv.csv`` in the directory that
+contains the ``t3co`` package.
+
+The script runs as soon as it is imported, so run it directly::
+
+    python src/t3co/demos/demo.py
+"""
 import time
 from pathlib import Path
 

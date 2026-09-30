@@ -1,3 +1,12 @@
+"""Powertrain optimization for minimum total cost of ownership.
+
+``VehicleDesignOpt`` poses the sizing of a vehicle's powertrain as a pymoo
+problem, and ``build_algorithm`` and ``build_termination`` configure the
+solver from Config settings. The sweep module calls these for every selection
+in an optimizing analysis; ``python -m t3co.optimize.optimization`` runs a
+single selection on its own and prints the best design.
+"""
+
 import argparse
 
 import numpy as np
@@ -32,15 +41,35 @@ ALGORITHMS = [ALGO_NSGA2, ALGO_NelderMead, ALGO_PatternSearch, ALGO_PSO]
 
 
 class VehicleDesignOpt(ElementwiseProblem):
-    """
-    Decision variables:
-      x[0]: Battery size (kWh)
-      x[1]: Fuel converter peak power (kW)
-      x[2]: Fuel storage energy (kWh equivalent)
-      x[3]: Motor peak power (kW)
+    """Single-objective pymoo problem that sizes a powertrain for minimum TCO.
 
-    Objective:
-      Minimize Ledger.discounted_tco_dol.
+    The decision variables depend on the vehicle's powertrain type, and each
+    is bounded by the matching ``knob_min_*``/``knob_max_*`` Scenario inputs:
+
+    - Conventional (``CONV``): ``x[0]`` fuel converter peak power (kW), and
+      ``x[1]`` fuel storage energy (kWh equivalent) only when both fuel
+      storage knobs are set.
+    - Battery electric (``BEV``): ``x[0]`` battery size (kWh), ``x[1]`` motor
+      peak power (kW).
+    - Hybrid (``HEV``): ``x[0]`` battery size (kWh), ``x[1]`` fuel converter
+      peak power (kW), ``x[2]`` fuel storage energy (kWh equivalent), ``x[3]``
+      motor peak power (kW).
+
+    The objective is ``Ledger.discounted_tco_dol``. Inequality constraints
+    (satisfied when ``<= 0``) are added only when enabled on the Scenario and
+    given a positive target: 0-60 and 0-30 mph times at GVWR
+    (``constraint_accel``), minimum speeds on 6% and 1.25% grades
+    (``constraint_grade``), and primary fuel range (``constraint_range``).
+
+    Args:
+        vehicle (Vehicle): Vehicle to size. Its design variables are
+            overwritten on every evaluation.
+        scenario (Scenario): Scenario supplying knob bounds, constraint
+            targets, and cost inputs.
+        config (Config): Analysis configuration.
+        runner (optional): pymoo elementwise runner, e.g.
+            ``StarmapParallelization`` to evaluate a population in a process
+            pool. ``None`` evaluates designs serially.
     """
 
     def __init__(
@@ -155,7 +184,17 @@ class VehicleDesignOpt(ElementwiseProblem):
             ),
         )
 
-    def apply_design_variables(self, x, vehicle=None):
+    def apply_design_variables(self, x, vehicle=None) -> Vehicle:
+        """Write the design variables in ``x`` onto a vehicle.
+
+        Args:
+            x (array-like): Design variables, laid out as described on the class.
+            vehicle (Vehicle, optional): Vehicle to modify. Defaults to the
+                problem's own vehicle.
+
+        Returns:
+            Vehicle: The modified vehicle; it is changed in place.
+        """
         target_vehicle = self.vehicle if vehicle is None else vehicle
 
         if target_vehicle.veh_pt_type == gl.CONV:
@@ -175,7 +214,18 @@ class VehicleDesignOpt(ElementwiseProblem):
 
         return target_vehicle
 
-    def evaluate_solution(self, x):
+    def evaluate_solution(self, x) -> tuple:
+        """Simulate and cost one design.
+
+        Applies ``x`` to the vehicle, runs FASTSim over the Scenario's design
+        cycle and any enabled performance tests, and builds the Ledger.
+
+        Args:
+            x (array-like): Design variables, laid out as described on the class.
+
+        Returns:
+            tuple: ``(vehicle, energy, ledger)`` for the evaluated design.
+        """
         vehicle = self.apply_design_variables(x)
 
         energy = Energy()

@@ -1,3 +1,9 @@
+"""Cost-component toggles loaded from ``cost_toggles.json``.
+
+Each toggle switches one cost component, or a model feature such as running
+FASTSim or fetching EIA fuel prices, on or off for a run.
+"""
+
 import json
 from dataclasses import dataclass
 from pathlib import Path

@@ -14,6 +14,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import tempfile
 import time
 from pathlib import Path
@@ -37,6 +38,15 @@ except ImportError:
     pass
 
 logger = logging.getLogger(__name__)
+
+# requests puts the full request URL, query string included, into its error
+# messages, and the API key travels as a query parameter.
+_API_KEY_IN_URL = re.compile(r"(api_key=)[^&\s'\"]+")
+
+
+def _redact_api_key(text) -> str:
+    """Return ``text`` with any ``api_key=<value>`` query value masked."""
+    return _API_KEY_IN_URL.sub(r"\1REDACTED", str(text))
 
 EIA_BASE_URL = "https://api.eia.gov/v2"
 
@@ -212,12 +222,16 @@ class EIAClient:
                         attempt,
                         self.max_retries,
                         wait,
-                        exc,
+                        _redact_api_key(exc),
                     )
                     time.sleep(wait)
+        # "from None" rather than "from last_error": the chained requests
+        # exception, and the urllib3 error inside it on connection failures,
+        # both carry the unredacted URL and would print it in any traceback.
         raise EIAClientError(
-            f"EIA API request failed after {self.max_retries} attempts: {last_error}"
-        ) from last_error
+            f"EIA API request failed after {self.max_retries} attempts: "
+            f"{_redact_api_key(last_error)}"
+        ) from None
 
     # ── AEO discovery ────────────────────────────────────────────────────
 

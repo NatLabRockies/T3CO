@@ -2,8 +2,10 @@
 
 The [`T3COCharts`](./api/charts.md) class (`t3co.visualize.charts`) turns a T3CO results CSV (or DataFrame) into three plots, each rendered with a selectable backend:
 
-- `backend="matplotlib"` (default) — static figures for PNG/PDF export.
+- `backend="matplotlib"` — static figures for PNG/PDF export. This is the default when you use the class from Python.
 - `backend="plotly"` — interactive, self-contained HTML.
+
+From the command line, `--plot` offers the same choice and defaults to the interactive Plotly report; see [Charts from the CLI](#charts-from-the-cli).
 
 ## Install
 
@@ -43,19 +45,19 @@ Stacked cost components per scenario, with a marker for the discounted TCO. Pass
 
 Each bar sums to the discounted TCO. Cash purchases stack the MSRP breakdown; loan and lease purchases stack the **down payment** and the **discounted loan/lease payments** instead, since those are what the Ledger counts. The residual value is a credit and stacks below zero, so the TCO marker sits at the bar's height above zero minus its depth below zero.
 
-<img src="../images/tco_breakdown_sample.png" alt="TCO breakdown" width="650"/>
+![TCO breakdown](../images/tco_breakdown_sample.png){ width="650" }
 
 ### Histogram
 
 Distribution of any numeric output across selections. `show_pct=True` plots the percentage of scenarios instead of a count.
 
-<img src="../images/histogram_sample.png" alt="Histogram" width="400"/>
+![Histogram](../images/histogram_sample.png){ width="400" }
 
 ### Violin
 
 Distribution of a metric across categories (e.g. `mpgge` by fuel type).
 
-<img src="../images/violinplot_sample.png" alt="Violin plot" width="400"/>
+![Violin plot](../images/violinplot_sample.png){ width="400" }
 
 ## Interactive explorer
 
@@ -98,7 +100,14 @@ T3COCharts.write_html_report(
 
 ## Charts from the CLI
 
-Add `--plot` to any sweep run to generate the charts next to the results CSV. Install the extra first:
+Add `--plot` to any sweep run to generate the charts next to the results CSV. It takes an optional backend:
+
+| Option | Output |
+|---|---|
+| `--plot` or `--plot plotly` | One interactive, self-contained HTML report (`…_charts.html`) that combines the explorer and the three charts. This is the default. |
+| `--plot matplotlib` | Static PNG images, one per chart (`…_tco_breakdown.png`, `…_tco_histogram.png`, `…_tco_violin.png`). `--plot seaborn` does the same. |
+
+Both `--plot matplotlib` and `--plot=matplotlib` work. Install the extra first:
 
 ```bash
 pip install t3co[viz]

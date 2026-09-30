@@ -291,5 +291,18 @@ def main(argv: Optional[List[str]] = None) -> pd.DataFrame:
     return summary
 
 
+def cli(argv: Optional[List[str]] = None) -> int:
+    """Console-script entry point for ``t3co_summarize``.
+
+    pip wraps console scripts as ``sys.exit(<entry point>())``. ``main``
+    returns the summary DataFrame for programmatic callers, and handing a
+    DataFrame to ``sys.exit`` prints it to stderr and exits with status 1,
+    so every successful run would report failure. Return an exit code
+    instead.
+    """
+    main(argv)
+    return 0
+
+
 if __name__ == "__main__":
-    main()
+    raise SystemExit(cli())

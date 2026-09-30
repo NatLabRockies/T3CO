@@ -1,13 +1,13 @@
 ![T3CO Logo](./images/t3co_logo.svg)
 
 # **T3CO** : Transportation Technology Total Cost of Ownership Tool
-[![homepage](https://img.shields.io/badge/homepage-t3co-blue)](https://www.nlr.gov/transportation/t3co.html) [![github](https://img.shields.io/badge/github-t3co-blue.svg)](https://github.com/NatLabRockies/T3CO) [![documentation](https://img.shields.io/badge/documentation-t3co-blue.svg)](https://NatLabRockies.github.io/T3CO/) [![PyPI - Version](https://img.shields.io/pypi/v/t3co)](https://pypi.org/project/t3co/) ![GitHub License](https://img.shields.io/github/license/NLR/T3CO) ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/t3co) 
+[![homepage](https://img.shields.io/badge/homepage-t3co-blue)](https://www.nlr.gov/transportation/t3co.html) [![github](https://img.shields.io/badge/github-t3co-blue.svg)](https://github.com/NatLabRockies/T3CO) [![documentation](https://img.shields.io/badge/documentation-t3co-blue.svg)](https://NatLabRockies.github.io/T3CO/) [![PyPI - Version](https://img.shields.io/pypi/v/t3co)](https://pypi.org/project/t3co/) ![GitHub License](https://img.shields.io/github/license/NatLabRockies/T3CO) ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/t3co) 
 
 ## Description
 
 This repo houses T3CO (Transportation Technology Total Cost of Ownership), software for modeling total cost of ownership for commercial vehicles with advanced powertrains.
 
-**New to 2.0?** See [What's New in T3CO 2.0](./whats_new.md) for a summary of EIA fuel price integration, expanded optimization algorithms, and other changes.
+**Upgrading to 2.1?** 2.1 refines the residual-value model, which lowers TCO results relative to 2.0, so rerun analyses with 2.1 when comparing results. See [What's New in T3CO](./whats_new.md) for this, the new visualization and results-summary modules, faster optimization, and the 2.0 changes.
 
 To learn about the models, go to the [Overview](./T3CO_Overview.md)
 

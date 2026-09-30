@@ -1,0 +1,24 @@
+name: Check Docs
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+      - run: pip install mkdocs-material mkdocstrings mkdocstrings-python mkdocs
+      - name: Build the documentation
+        run: mkdocs build -d site
+      # The Inputs/Outputs filter tables depend on extra_javascript/extra_css being
+      # present in mkdocs.yml. Those keys went missing in a merge once and the docs
+      # still built cleanly, so the broken filters only showed up on the live site.
+      - name: Check the parameter tables are wired up
+        run: python tests/docs/check_built_docs.py site

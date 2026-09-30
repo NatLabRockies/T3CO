@@ -345,3 +345,48 @@ def test_region_mapping_covers_nine_divisions():
     assert "1-0" in AEO_REGION_ID_TO_T3CO  # United States total
     for i in range(1, 10):
         assert f"1-{i}" in AEO_REGION_ID_TO_T3CO
+
+
+# ── Credential handling ──────────────────────────────────────────────────────
+
+
+def test_request_failures_never_expose_the_api_key(eia_client, caplog):
+    """The API key travels as a query parameter, and requests quotes the full
+    URL in its error messages. Neither the retry warnings nor the final
+    error, nor anything chained beneath it, may reveal the key.
+    """
+    import logging
+    import traceback
+
+    import requests
+
+    url = f"https://api.eia.gov/v2/aeo/2026/data?frequency=annual&api_key={FAKE_API_KEY}"
+
+    def failing_get(*args, **kwargs):
+        # Mirror how requests reports a connection failure: the urllib3
+        # error, itself quoting the URL, is chained beneath requests' own.
+        try:
+            raise OSError(f"Max retries exceeded with url: {url}")
+        except OSError as inner:
+            raise requests.ConnectionError(f"HTTPSConnectionPool: {url}") from inner
+
+    with (
+        patch("t3co.data_fetching.eia_client.requests.get", side_effect=failing_get),
+        patch("t3co.data_fetching.eia_client.time.sleep"),
+        caplog.at_level(logging.WARNING, logger="t3co.data_fetching.eia_client"),
+        pytest.raises(EIAClientError) as excinfo,
+    ):
+        eia_client._request("aeo/2026/data")
+
+    traceback_text = "".join(
+        traceback.format_exception(type(excinfo.value), excinfo.value, excinfo.value.__traceback__)
+    )
+    for label, text in [
+        ("retry warnings", caplog.text),
+        ("error message", str(excinfo.value)),
+        ("full traceback", traceback_text),
+    ]:
+        assert FAKE_API_KEY not in text, f"API key leaked in {label}"
+
+    assert "api_key=REDACTED" in caplog.text
+    assert "api_key=REDACTED" in str(excinfo.value)
