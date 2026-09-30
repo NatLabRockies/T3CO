@@ -193,3 +193,38 @@ def test_written_summary_is_rounded(tmp_path):
     # The Python API keeps full precision.
     unrounded = summarize_results(pd.read_csv(results_path), group_cols=["fleet"])
     assert unrounded.loc[0, "median_mpgge"] == pytest.approx(6.561725)
+
+
+def test_console_script_exits_zero_on_success(tmp_path):
+    """t3co_summarize must exit 0 when it succeeds.
+
+    pip generates the console script as ``sys.exit(<entry point>())``. The
+    entry point therefore has to return an exit code: returning the summary
+    DataFrame makes sys.exit print it to stderr and exit 1 on every
+    successful run. Resolve the entry point configured in pyproject.toml and
+    invoke it exactly that way.
+
+    The target is read from pyproject.toml rather than from installed
+    metadata, which is stale in any editable install made before the
+    script was added.
+    """
+    import importlib
+    import re
+    import sys
+    from pathlib import Path
+    from unittest.mock import patch
+
+    pyproject = (Path(__file__).resolve().parents[2] / "pyproject.toml").read_text()
+    match = re.search(r'^t3co_summarize\s*=\s*"([\w.]+):(\w+)"', pyproject, re.M)
+    assert match, "t3co_summarize is not declared in pyproject.toml"
+    entry_point = getattr(importlib.import_module(match.group(1)), match.group(2))
+
+    pd.DataFrame(
+        {"result_suffix": ["a", "a"], "discounted_tco_dol": [1.0, 3.0], "total_vmt": [1.0, 1.0]}
+    ).to_csv(tmp_path / "results_2026-01-01_00-00-00_a.csv", index=False)
+
+    with patch("builtins.print"), pytest.raises(SystemExit) as excinfo:
+        with patch.object(sys, "argv", ["t3co_summarize", "--results-dir", str(tmp_path)]):
+            sys.exit(entry_point())
+
+    assert excinfo.value.code == 0
