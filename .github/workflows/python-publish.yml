@@ -73,6 +73,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write  # to create the GitHub release
+      id-token: write  # to authenticate to PyPI through Trusted Publishing
     steps:
       - name: Download a distribution artifact
         uses: actions/download-artifact@v4
@@ -123,12 +124,16 @@ jobs:
           python -c "import sys, t3co; assert t3co.__version__ == sys.argv[1], (t3co.__version__, sys.argv[1]); print('t3co', t3co.__version__, 'installed successfully')" "${VERSION}"
 
       - name: Publish distribution 📦 to PyPI
-        # --skip-existing lets a re-run finish the release if a later step
-        # failed after this upload succeeded.
-        run: twine upload --skip-existing -r pypi dist/*
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.pypi_password }}
+        # Authenticates through the Trusted Publisher configured for t3co on
+        # PyPI, so no API token is stored in the repository. PyPI matches the
+        # publisher on this repository and this workflow file's name, so
+        # renaming python-publish.yml breaks publishing until the publisher
+        # on PyPI is updated. skip-existing lets a re-run finish the release
+        # if a later step failed after this upload succeeded.
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+          verbose: true
 
       - name: Create the GitHub release
         env:
