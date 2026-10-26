@@ -17,6 +17,13 @@ class OperatingCosts:
     fuel_used_gal_gge_per_yr: float = 0.0
     fuel_used_gal_gde_per_yr: float = 0.0
     energy_used_kwh_per_yr: float = 0.0
+    enroute_fuel_price_dol_per_gge: float = 0.0
+    energy_fueled_enroute_kwh_per_yr: float = 0.0
+    energy_fueled_offshift_kwh_per_yr: float = 0.0
+    enroute_fuel_cost_dol_per_yr: float = 0.0
+    offshift_fuel_cost_dol_per_yr: float = 0.0
+    enroute_charging_duration_hr_per_yr: float = 0.0
+    offshift_charging_duration_hr_per_yr: float = 0.0
     maintenance_cost_dol_per_yr: float = 0.0
     maintenance_cost_dol_per_mi: float = 0.0
     insurance_cost_dol_per_yr: float = 0.0
@@ -62,7 +69,10 @@ class OperatingCosts:
 
         if scenario.cost_toggles.fuel_cost:
             self.set_fuel_cost(
-                year_number=year_number, vehicle=vehicle, scenario=scenario
+                year_number=year_number,
+                vehicle=vehicle,
+                scenario=scenario,
+                oppy_costs=oppy_costs,
             )
         if scenario.cost_toggles.maintenance_oper_cost:
             self.set_maintenance_oper_cost(
@@ -90,12 +100,18 @@ class OperatingCosts:
         self.set_disc_oper_cost(year_number=year_number, scenario=scenario)
 
     def set_fuel_cost(
-        self, year_number: int, vehicle: Vehicle, scenario: Scenario
+        self,
+        year_number: int,
+        vehicle: Vehicle,
+        scenario: Scenario,
+        oppy_costs: OpportunityCosts = None,
     ) -> None:
         """
         Sets the fuel cost for the given year.
 
         This method calculates the fuel cost based on the fuel price and the amount of fuel used.
+        For electricity, the energy is split into enroute and off-shift charging, each
+        priced separately (see set_enroute_offshift_fuel_cost).
         The calculation uses the following OperatingCosts elements:
         - distance_traveled_mi_per_yr
         - mpgge
@@ -117,6 +133,7 @@ class OperatingCosts:
             year_number (int): The year number for which the fuel cost is calculated.
             vehicle (Vehicle): The vehicle instance.
             scenario (Scenario): The scenario instance containing configuration data.
+            oppy_costs (OpportunityCosts, optional): The opportunity costs, whose charging_energy_kwh_per_yr is the energy charged enroute. Defaults to None.
         """
         if scenario.fuel_prices_df is None:
             scenario.fuel_prices_df = pd.read_csv(
@@ -146,6 +163,18 @@ class OperatingCosts:
                 "electricity_dol_per_kwh", str(scenario.model_year + year_number - 1)
             ]
             self.fuel_price_dol_per_gge = electricity_dol_per_kwh * gl.KWH_PER_GGE
+            # Enroute charging falls back to the depot price when the fuel
+            # prices file has no enroute row, so results don't change.
+            if "enroute_electricity_dol_per_kwh" in scenario.fuel_prices_df.index:
+                self.enroute_fuel_price_dol_per_gge = (
+                    scenario.fuel_prices_df.loc[
+                        "enroute_electricity_dol_per_kwh",
+                        str(scenario.model_year + year_number - 1),
+                    ]
+                    * gl.KWH_PER_GGE
+                )
+            else:
+                self.enroute_fuel_price_dol_per_gge = self.fuel_price_dol_per_gge
         elif scenario.fuel_type.lower() == "cng":
             cng_dol_per_gge = scenario.fuel_prices_df.loc[
                 "cng_dol_per_gge", str(scenario.model_year + year_number - 1)
@@ -170,15 +199,84 @@ class OperatingCosts:
             )
             self.energy_used_kwh_per_yr = self.fuel_used_gal_gge_per_yr * gl.KWH_PER_GGE
 
-            self.fuel_cost_dol_per_yr = (
-                self.fuel_price_dol_per_gge * self.fuel_used_gal_gge_per_yr
-            )
+            if "electricity" in scenario.fuel_type.lower():
+                self.set_enroute_offshift_fuel_cost(
+                    scenario=scenario, oppy_costs=oppy_costs
+                )
+            else:
+                self.fuel_cost_dol_per_yr = (
+                    self.fuel_price_dol_per_gge * self.fuel_used_gal_gge_per_yr
+                )
         else:
             self.fuel_used_gal_gge_per_yr = 0
             self.fuel_used_gal_gde_per_yr = 0
             self.energy_used_kwh_per_yr = 0
             self.fuel_cost_dol_per_yr = 0
             # print(f"Warning: mpgge is {self.mpgge}. Fuel cost set to 0.")
+
+    def set_enroute_offshift_fuel_cost(
+        self, scenario: Scenario, oppy_costs: OpportunityCosts = None
+    ) -> None:
+        """
+        Splits the electricity used in the year into enroute and off-shift charging.
+
+        Enroute charging is the energy refilled during fueling dwells within a shift
+        (OpportunityCosts.charging_energy_kwh_per_yr), capped at the energy used.
+        Off-shift charging, for example overnight at the depot, supplies the rest.
+        Enroute energy is priced at enroute_fuel_price_dol_per_gge and off-shift energy
+        at fuel_price_dol_per_gge. Charging durations assume
+        scenario.ess_max_charging_power_kw for both and exclude dwell overhead.
+
+        Inputs from scenario:
+        - ess_max_charging_power_kw
+
+        Inputs from oppy_costs:
+        - charging_energy_kwh_per_yr
+
+        Estimated class variables:
+        - energy_fueled_enroute_kwh_per_yr
+        - energy_fueled_offshift_kwh_per_yr
+        - enroute_fuel_cost_dol_per_yr
+        - offshift_fuel_cost_dol_per_yr
+        - enroute_charging_duration_hr_per_yr
+        - offshift_charging_duration_hr_per_yr
+        - fuel_cost_dol_per_yr
+
+        Args:
+            scenario (Scenario): The scenario instance containing configuration data.
+            oppy_costs (OpportunityCosts, optional): The opportunity costs. Without them, or when fueling dwell time is not calculated, all charging is off-shift. Defaults to None.
+        """
+        charged_enroute_kwh = getattr(oppy_costs, "charging_energy_kwh_per_yr", 0.0)
+        self.energy_fueled_enroute_kwh_per_yr = min(
+            max(0.0, charged_enroute_kwh), self.energy_used_kwh_per_yr
+        )
+        self.energy_fueled_offshift_kwh_per_yr = (
+            self.energy_used_kwh_per_yr - self.energy_fueled_enroute_kwh_per_yr
+        )
+
+        self.enroute_fuel_cost_dol_per_yr = (
+            self.enroute_fuel_price_dol_per_gge
+            * self.energy_fueled_enroute_kwh_per_yr
+            / gl.KWH_PER_GGE
+        )
+        self.offshift_fuel_cost_dol_per_yr = (
+            self.fuel_price_dol_per_gge
+            * self.energy_fueled_offshift_kwh_per_yr
+            / gl.KWH_PER_GGE
+        )
+        self.fuel_cost_dol_per_yr = (
+            self.enroute_fuel_cost_dol_per_yr + self.offshift_fuel_cost_dol_per_yr
+        )
+
+        if scenario.ess_max_charging_power_kw:
+            self.enroute_charging_duration_hr_per_yr = (
+                self.energy_fueled_enroute_kwh_per_yr
+                / scenario.ess_max_charging_power_kw
+            )
+            self.offshift_charging_duration_hr_per_yr = (
+                self.energy_fueled_offshift_kwh_per_yr
+                / scenario.ess_max_charging_power_kw
+            )
 
     def set_maintenance_oper_cost(
         self, year_number: int, vehicle: Vehicle, scenario: Scenario

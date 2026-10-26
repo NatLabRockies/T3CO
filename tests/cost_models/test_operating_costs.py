@@ -176,6 +176,94 @@ def test_set_fuel_cost(vehicle, scenario, energy):
     assert operating_costs.fuel_cost_dol_per_yr == pytest.approx(11233.33, 0.01)
 
 
+def _fuel_cost_for_enroute_energy(
+    vehicle, scenario, energy, charged_enroute_kwh, enroute_price=None
+):
+    """Run set_fuel_cost with a given enroute charging energy and price."""
+    if enroute_price is not None:
+        scenario.fuel_prices_df.loc[len(scenario.fuel_prices_df)] = {
+            "Fuel": "enroute_electricity_dol_per_kwh",
+            "Region": "US",
+            **{str(year): enroute_price for year in range(2020, 2030)},
+        }
+    scenario.fuel_prices_df.set_index("Fuel", inplace=True)
+
+    operating_costs = OperatingCosts.__new__(OperatingCosts)
+    operating_costs.mpgge = energy.mpgge
+    operating_costs.distance_traveled_mi_per_yr = scenario.vmt[0]
+    oppy_costs = OpportunityCosts.__new__(OpportunityCosts)
+    oppy_costs.charging_energy_kwh_per_yr = charged_enroute_kwh
+
+    operating_costs.set_fuel_cost(
+        year_number=1, vehicle=vehicle, scenario=scenario, oppy_costs=oppy_costs
+    )
+    return operating_costs
+
+
+def test_enroute_charging_defaults_to_depot_price(vehicle, scenario, energy):
+    """Without an enroute price row, splitting the energy leaves fuel cost unchanged."""
+    operating_costs = _fuel_cost_for_enroute_energy(
+        vehicle, scenario, energy, charged_enroute_kwh=20000.0
+    )
+
+    assert operating_costs.fuel_cost_dol_per_yr == pytest.approx(11233.33, 0.01)
+    assert operating_costs.energy_fueled_enroute_kwh_per_yr == pytest.approx(20000.0)
+    assert (
+        operating_costs.energy_fueled_enroute_kwh_per_yr
+        + operating_costs.energy_fueled_offshift_kwh_per_yr
+    ) == pytest.approx(operating_costs.energy_used_kwh_per_yr)
+    assert operating_costs.enroute_fuel_cost_dol_per_yr == pytest.approx(2000.0)
+    # 100 kW charging power in the scenario fixture.
+    assert operating_costs.enroute_charging_duration_hr_per_yr == pytest.approx(200.0)
+    assert operating_costs.offshift_charging_duration_hr_per_yr == pytest.approx(
+        operating_costs.energy_fueled_offshift_kwh_per_yr / 100.0
+    )
+
+
+def test_enroute_charging_uses_enroute_price(vehicle, scenario, energy):
+    operating_costs = _fuel_cost_for_enroute_energy(
+        vehicle, scenario, energy, charged_enroute_kwh=20000.0, enroute_price=0.3
+    )
+
+    offshift_kwh = operating_costs.energy_used_kwh_per_yr - 20000.0
+    assert operating_costs.enroute_fuel_cost_dol_per_yr == pytest.approx(6000.0)
+    assert operating_costs.offshift_fuel_cost_dol_per_yr == pytest.approx(
+        offshift_kwh * 0.1
+    )
+    assert operating_costs.fuel_cost_dol_per_yr == pytest.approx(
+        6000.0 + offshift_kwh * 0.1
+    )
+
+
+def test_enroute_charging_is_capped_at_energy_used(vehicle, scenario, energy):
+    operating_costs = _fuel_cost_for_enroute_energy(
+        vehicle, scenario, energy, charged_enroute_kwh=1e9, enroute_price=0.3
+    )
+
+    assert operating_costs.energy_fueled_enroute_kwh_per_yr == pytest.approx(
+        operating_costs.energy_used_kwh_per_yr
+    )
+    assert operating_costs.energy_fueled_offshift_kwh_per_yr == 0
+    assert operating_costs.fuel_cost_dol_per_yr == pytest.approx(
+        operating_costs.energy_used_kwh_per_yr * 0.3
+    )
+
+
+def test_charging_is_offshift_without_opportunity_costs(vehicle, scenario, energy):
+    scenario.fuel_prices_df.set_index("Fuel", inplace=True)
+    operating_costs = OperatingCosts.__new__(OperatingCosts)
+    operating_costs.mpgge = energy.mpgge
+    operating_costs.distance_traveled_mi_per_yr = scenario.vmt[0]
+
+    operating_costs.set_fuel_cost(year_number=1, vehicle=vehicle, scenario=scenario)
+
+    assert operating_costs.energy_fueled_enroute_kwh_per_yr == 0
+    assert operating_costs.energy_fueled_offshift_kwh_per_yr == pytest.approx(
+        operating_costs.energy_used_kwh_per_yr
+    )
+    assert operating_costs.fuel_cost_dol_per_yr == pytest.approx(11233.33, 0.01)
+
+
 def test_set_maintenance_oper_cost(vehicle, scenario):
     operating_costs = OperatingCosts.__new__(
         OperatingCosts,
