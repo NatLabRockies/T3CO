@@ -12,6 +12,7 @@
 ### Operating Cost Components
 
 - *Fuel Expense*: Total cost of fuel or energy consumed
+    - For battery electric vehicles, charging is split into enroute charging (during fueling dwells within a shift) and off-shift charging (for example overnight at the depot). Enroute energy is priced at the `enroute_electricity_dol_per_kwh` row of the fuel prices file, or at the depot price when that row is absent. Enroute energy is what the fueling dwell model refills, so trips covered by `fdt_num_free_dwell_trips` are charged off-shift; with `fdt_num_free_dwell_trips` set to 0, every recharge is a dwell and all charging is enroute.
 - *Maintenance Cost*
 - *Purchasing Cost:* Recurring payments for loan or lease purchasing method
 - *Insurance Cost*

@@ -235,6 +235,22 @@
             <td>float</td>
         </tr>
         <tr>
+            <td>total_enroute_fuel_cost_dol</td>
+            <td>OperatingCosts</td>
+            <td>Total Enroute Charging Cost</td>
+            <td>$</td>
+            <td>Estimated discounted cost of electricity charged enroute, during fueling dwells within a shift - priced at enroute_electricity_dol_per_kwh in the fuel prices file, or the depot electricity price when that row is absent. Part of total_fuel_cost_dol; zero for non-electric fuels</td>
+            <td>float</td>
+        </tr>
+        <tr>
+            <td>total_offshift_fuel_cost_dol</td>
+            <td>OperatingCosts</td>
+            <td>Total Off-Shift Charging Cost</td>
+            <td>$</td>
+            <td>Estimated discounted cost of electricity charged off-shift, for example overnight at the depot - priced at electricity_dol_per_kwh. Part of total_fuel_cost_dol; zero for non-electric fuels</td>
+            <td>float</td>
+        </tr>
+        <tr>
             <td>total_maintenance_cost_dol</td>
             <td>OperatingCosts</td>
             <td>Total Maintenance Operating Cost</td>
@@ -368,6 +384,38 @@
             <td>Fueling/Charging Dwell Time</td>
             <td>hr</td>
             <td>Total dwell time of vehicle due to fueling/charging - used to   estimate downtime opportunity cost</td>
+            <td>float</td>
+        </tr>
+        <tr>
+            <td>total_energy_fueled_enroute_kwh</td>
+            <td>OperatingCosts</td>
+            <td>Enroute Charging Energy</td>
+            <td>kWh</td>
+            <td>Total energy charged enroute over the vehicle life - the energy refilled during fueling dwells, capped at the energy used</td>
+            <td>float</td>
+        </tr>
+        <tr>
+            <td>total_energy_fueled_offshift_kwh</td>
+            <td>OperatingCosts</td>
+            <td>Off-Shift Charging Energy</td>
+            <td>kWh</td>
+            <td>Total energy charged off-shift over the vehicle life - the energy used that was not charged enroute</td>
+            <td>float</td>
+        </tr>
+        <tr>
+            <td>total_enroute_charging_duration_hr</td>
+            <td>OperatingCosts</td>
+            <td>Enroute Charging Duration</td>
+            <td>hr</td>
+            <td>Total time spent charging enroute at scenario.ess_max_charging_power_kw, excluding dwell overhead</td>
+            <td>float</td>
+        </tr>
+        <tr>
+            <td>total_offshift_charging_duration_hr</td>
+            <td>OperatingCosts</td>
+            <td>Off-Shift Charging Duration</td>
+            <td>hr</td>
+            <td>Total time spent charging off-shift at scenario.ess_max_charging_power_kw</td>
             <td>float</td>
         </tr>
         <tr>
