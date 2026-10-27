@@ -284,3 +284,47 @@ def test_serial_and_parallel_evaluation_agree():
     # the repeated design scores identically within a single batch
     np.testing.assert_allclose(serial[0][0], serial[0][3], rtol=0, atol=0)
     np.testing.assert_allclose(parallel[0][0], parallel[0][3], rtol=0, atol=0)
+
+
+@pytest.mark.parametrize(
+    "veh_pt_type, x",
+    [
+        (gl.CONV, [400.0, 3000.0]),
+        (gl.BEV, [600.0, 300.0]),
+        (gl.HEV, [60.0, 300.0, 3000.0, 150.0]),
+    ],
+)
+def test_apply_design_variables_updates_veh_kg(
+    veh_pt_type, x, mock_scenario, mock_config
+):
+    """Each candidate design must be costed with its own mass."""
+    from t3co.input_data.vehicle import Vehicle
+
+    vehicle = Vehicle(
+        selection=1,
+        veh_pt_type=veh_pt_type,
+        fc_max_kw=300.0,
+        fs_kwh=2000.0,
+        mc_max_kw=200.0,
+        ess_max_kwh=300.0,
+        glider_kg=10000.0,
+        trans_kg=300.0,
+        cargo_kg=15000.0,
+        fs_kwh_per_kg=12.67,
+        fc_kw_per_kg=0.26,
+        mc_pe_kg_per_kw=0.58,
+        ess_kg_per_kwh=4.39,
+        ess_base_kg=75.0,
+    )
+    vehicle.set_veh_kg()
+    start_kg = vehicle.veh_kg
+
+    problem = VehicleDesignOpt(vehicle, mock_scenario, mock_config)
+    problem.apply_design_variables(x)
+
+    import dataclasses
+
+    expected = dataclasses.replace(vehicle)
+    expected.set_veh_kg()
+    assert vehicle.veh_kg == pytest.approx(expected.veh_kg)
+    assert vehicle.veh_kg != start_kg
