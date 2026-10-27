@@ -97,7 +97,7 @@ pip install -e .[dev]
 ```
 
 ### Copying the Demo Input Files
-The [`t3co.resources`](./src/t3co/resources) module folder contains all the necessary input files needed for running T3CO. To get an offline copy of this folder in your preferred directory, run:
+The [`t3co.resources`](https://github.com/NatLabRockies/T3CO/tree/main/src/t3co/resources) module folder contains all the necessary input files needed for running T3CO. To get an offline copy of this folder in your preferred directory, run:
 ```bash
 install_t3co_demo_inputs
 ```
