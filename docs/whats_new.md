@@ -4,7 +4,7 @@
 
 T3CO 2.1 refines the residual-value model, adds visualization and results-summary modules, and makes vehicle optimization faster, reproducible, and available in batch mode.
 
-Install it with `pip install t3co==2.1.1`. 2.1.1 is the first 2.1 release on PyPI: 2.1.0 was tagged on GitHub but never uploaded. The two have the same code; 2.1.1 only fixes a link in the README, which is the PyPI project description.
+Install it with `pip install t3co==2.1.2`. 2.1.1 was the first 2.1 release on PyPI: 2.1.0 was tagged on GitHub but never uploaded. 2.1.0, 2.1.1 and 2.1.2 have the same code; 2.1.1 fixed a link in the README and 2.1.2 makes the README (the PyPI project description) version-independent.
 
 ### Refined residual-value model — TCO results change
 
