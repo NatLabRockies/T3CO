@@ -21,7 +21,10 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Pinned because setup-python has no Python 3.9 build for the Ubuntu
+    # release that ubuntu-latest points to, and publish needs every
+    # matrix job to pass.
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
