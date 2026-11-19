@@ -148,3 +148,12 @@ def test_get_range(scenario, fastsim_vehicle, fastsim_cycle):
             expected_range = elec_range_mi + conv_range_mi
 
         assert run_fastsim.range_mi == pytest.approx(expected_range, 0.01)
+
+
+def test_veh_override_kg_sets_simulated_mass(scenario):
+    if not fastsim_installed:
+        pytest.skip("fastsim extra not installed")
+    default_run = RunFASTSim(veh_no=1, scenario=scenario)
+    loaded_run = RunFASTSim(veh_no=1, scenario=scenario, veh_override_kg=40000.0)
+    assert default_run.vehicle.veh_kg != pytest.approx(40000.0)
+    assert loaded_run.vehicle.veh_kg == pytest.approx(40000.0)

@@ -37,6 +37,7 @@ class RunFASTSim:
         / "Demo_FY22_vehicle_model_assumptions.csv",
         use_rust: bool = True,
         cycle: fastsim.cycle.Cycle = None,
+        veh_override_kg: float = None,
     ) -> None:
         self.load_vehicle(
             t3co_vehicle=t3co_vehicle,
@@ -44,6 +45,7 @@ class RunFASTSim:
             veh_input_path=veh_input_path,
             vehicle_df=vehicle_df,
             use_rust=use_rust,
+            veh_override_kg=veh_override_kg,
         )
 
         if cycle:
@@ -102,6 +104,7 @@ class RunFASTSim:
         veh_input_path: Union[str, Path] = None,
         vehicle_df: pd.DataFrame = None,
         use_rust: bool = True,
+        veh_override_kg: float = None,
     ) -> fastsim.vehicle.Vehicle:
         """
         Loads vehicle object from vehicle number and input CSV filepath.
@@ -109,6 +112,8 @@ class RunFASTSim:
         Args:
             veh_no (int): Vehicle selection number.
             veh_input_path (Union[str, Path]): Vehicle model assumptions input CSV file path.
+            veh_override_kg (float, optional): Mass to simulate instead of the
+                component mass sum, e.g. GVWR for the performance tests.
 
         Returns:
             fastsim.vehicle.Vehicle: FASTSim vehicle object.
@@ -132,6 +137,9 @@ class RunFASTSim:
             self.vehicle.fc_max_kw = t3co_vehicle.fc_max_kw
             self.vehicle.fs_kwh = t3co_vehicle.fs_kwh
             self.vehicle.mc_max_kw = t3co_vehicle.mc_max_kw
+
+        if veh_override_kg:
+            self.vehicle.veh_override_kg = veh_override_kg
 
         self.vehicle.set_derived()
         self.vehicle.set_veh_mass()
