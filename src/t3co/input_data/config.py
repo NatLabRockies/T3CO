@@ -59,6 +59,7 @@ class Config:
     fuel_prices_zipcode: Union[str, int] = None
     fuel_prices_region: str = None
     fuel_prices_source_region: str = None
+    registration_fees_file: str = ""
     region: str = None
     eia_aeo_year: str = None
     eia_aeo_case: str = None
@@ -337,6 +338,7 @@ class Config:
             "energy_file",
             "plf_weight_dist_file",
             "insurance_rates_file",
+            "registration_fees_file",
         ]:
             val = getattr(self, attr)
             if val and not Path(val).is_absolute():

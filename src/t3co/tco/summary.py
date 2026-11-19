@@ -31,6 +31,7 @@ DEFAULT_METRICS = [
     "total_fuel_cost_dol",
     "total_maintenance_cost_dol",
     "insurance_cost_dol",
+    "registration_fees_dol",
     "residual_cost_dol",
     "mpgge",
     "total_vmt",

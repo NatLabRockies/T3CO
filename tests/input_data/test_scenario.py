@@ -113,6 +113,29 @@ def test_scenario_from_dict_uses_defaults_for_missing_fields():
     assert scenario.fuel_prices_file == "./auxiliary/FuelPrices.csv"
     assert scenario.mpgge == 0.0
     assert scenario.primary_fuel_range_mi == 0.0
+    assert scenario.registration_fees_dol_per_yr is None
+    assert scenario.registration_fees_file == "./auxiliary/RegistrationFees.csv"
+
+
+@pytest.mark.parametrize(
+    "raw_value, expected",
+    [
+        (float("nan"), None),
+        ("", None),
+        (300, [300, 300]),
+        ("[100, 200, 300]", [100, 200]),
+    ],
+)
+def test_scenario_from_dict_parses_registration_fees(raw_value, expected):
+    scenario = Scenario.from_dict(
+        {
+            "selection": 1,
+            "scenario_name": "Registration Scenario",
+            "vehicle_life_yr": 2,
+            "registration_fees_dol_per_yr": raw_value,
+        }
+    )
+    assert scenario.registration_fees_dol_per_yr == expected
 
 
 def _make_fake_eia_fuel_prices_df(*regions):

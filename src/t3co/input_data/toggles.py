@@ -33,6 +33,7 @@ class Toggles:
     eia_fuel_prices: bool = True
     maintenance_oper_cost: bool = True
     insurance_cost: bool = True
+    registration_fees: bool = True
     purchasing_cost: bool = True
     fueling_dwell_labor: bool = True
     payload_oppy_cost: bool = True

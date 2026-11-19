@@ -53,6 +53,7 @@ class Ledger:
     total_purchasing_cost_dol: float = 0.0
     total_purchasing_payment_dol: float = 0.0
     insurance_cost_dol: float = 0.0
+    registration_fees_dol: float = 0.0
     fueling_dwell_labor_cost_dol: float = 0.0
 
     payload_capacity_cost_dol: float = 0.0
@@ -258,6 +259,13 @@ class Ledger:
         self.insurance_cost_dol = sum(
             self.scenario.get_discounted_value(
                 self.tco_per_year[year_index].oper_costs_dol.insurance_cost_dol_per_yr,
+                year_number=year_index + 1,
+            )
+            for year_index in range(self.vehicle_life_yr)
+        )
+        self.registration_fees_dol = sum(
+            self.scenario.get_discounted_value(
+                self.tco_per_year[year_index].oper_costs_dol.registration_fees_dol_per_yr,
                 year_number=year_index + 1,
             )
             for year_index in range(self.vehicle_life_yr)
