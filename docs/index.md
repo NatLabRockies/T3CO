@@ -7,7 +7,7 @@
 
 This repo houses T3CO (Transportation Technology Total Cost of Ownership), software for modeling total cost of ownership for commercial vehicles with advanced powertrains.
 
-**Upgrading to 2.1?** 2.1 refines the residual-value model, which lowers TCO results relative to 2.0, so rerun analyses with 2.1 when comparing results. See [What's New in T3CO](./whats_new.md) for this, the new visualization and results-summary modules, faster optimization, and the 2.0 changes.
+For the changes in each release, including any that change results, see [What's New in T3CO](./whats_new.md).
 
 To learn about the models, go to the [Overview](./T3CO_Overview.md)
 
