@@ -34,6 +34,7 @@ class Vehicle:
     ess_kg_per_kwh: float = 0.0
     ess_base_kg: float = 0.0
     veh_override_kg: float = 0.0
+    comp_mass_multiplier: float = 1.0
     max_soc: float = 0.0
     min_soc: float = 0.0
 
@@ -112,30 +113,35 @@ class Vehicle:
     def set_veh_kg(self) -> None:
         """
         Sets the vehicle weight in kilograms.
+
+        Uses the same formula as FASTSim's ``Vehicle.set_veh_mass``, so that the
+        mass T3CO costs is the mass FASTSim simulates. ``comp_mass_multiplier``
+        applies to every component except the glider and the cargo.
         """
         if self.veh_override_kg:
             self.veh_kg = self.veh_override_kg
         else:
+            fs_kg = self.fs_kwh / self.fs_kwh_per_kg if self.fs_kwh_per_kg != 0 else 0
+            fc_kg = (
+                self.fc_base_kg + self.fc_max_kw / self.fc_kw_per_kg
+                if self.fc_max_kw != 0 and self.fc_kw_per_kg != 0
+                else 0
+            )
+            mc_kg = (
+                self.mc_pe_base_kg + self.mc_pe_kg_per_kw * self.mc_max_kw
+                if self.mc_max_kw != 0
+                else 0
+            )
+            ess_kg = (
+                self.ess_base_kg + self.ess_kg_per_kwh * self.ess_max_kwh
+                if self.ess_max_kwh != 0
+                else 0
+            )
             self.veh_kg = (
                 self.glider_kg
-                + self.trans_kg
                 + self.cargo_kg
-                + (self.fs_kwh / self.fs_kwh_per_kg if self.fs_kwh_per_kg != 0 else 0)
-                + (
-                    self.fc_base_kg + self.fc_kw_per_kg / self.fc_max_kw
-                    if self.fc_max_kw != 0
-                    else 0
-                )
-                + (
-                    self.mc_pe_base_kg + self.mc_pe_kg_per_kw / self.mc_max_kw
-                    if self.mc_max_kw != 0
-                    else 0
-                )
-                + (
-                    self.ess_base_kg + self.ess_kg_per_kwh / self.ess_max_kwh
-                    if self.ess_max_kwh != 0
-                    else 0
-                )
+                + self.comp_mass_multiplier
+                * (self.trans_kg + fs_kg + fc_kg + mc_kg + ess_kg)
             )
 
     def delete_dataframes(self) -> None:

@@ -55,29 +55,58 @@ def test_from_config(config, mock_vehicle_db):
 def test_set_veh_kg(config, mock_vehicle_db):
     config.vehicle_file = mock_vehicle_db
     vehicle = Vehicle.from_config(selection=1, config=config)
+    vehicle.comp_mass_multiplier = 1.2
     vehicle.set_veh_kg()
-    expected_veh_kg = (
-        vehicle.glider_kg
-        + vehicle.trans_kg
-        + vehicle.cargo_kg
-        + (vehicle.fs_kwh / vehicle.fs_kwh_per_kg if vehicle.fs_kwh else 0)
-        + (
-            vehicle.fc_base_kg + vehicle.fc_kw_per_kg / vehicle.fc_max_kw
-            if vehicle.fc_max_kw
-            else 0
-        )
-        + (
-            vehicle.mc_pe_base_kg + vehicle.mc_pe_kg_per_kw / vehicle.mc_max_kw
-            if vehicle.mc_max_kw
-            else 0
-        )
-        + (
-            vehicle.ess_base_kg + vehicle.ess_kg_per_kwh / vehicle.ess_max_kwh
-            if vehicle.ess_max_kwh
-            else 0
-        )
+    # glider 1000, cargo 200, and multiplied by 1.2:
+    # trans 500, fs 50 / 0.5, fc 100 / 0.1 + 300, mc 50 + 0.05 * 200,
+    # ess 100 + 0.2 * 75
+    expected_veh_kg = 1000 + 200 + 1.2 * (500 + 100 + 1300 + 60 + 115)
+    assert vehicle.veh_kg == pytest.approx(expected_veh_kg)
+
+
+def test_set_veh_kg_grows_with_component_size(config, mock_vehicle_db):
+    config.vehicle_file = mock_vehicle_db
+    vehicle = Vehicle.from_config(selection=1, config=config)
+    vehicle.set_veh_kg()
+    small_kg = vehicle.veh_kg
+    vehicle.ess_max_kwh *= 2
+    vehicle.set_veh_kg()
+    assert vehicle.veh_kg - small_kg == pytest.approx(
+        vehicle.ess_kg_per_kwh * vehicle.ess_max_kwh / 2
     )
-    assert vehicle.veh_kg == expected_veh_kg
+
+
+def test_set_veh_kg_uses_override(config, mock_vehicle_db):
+    config.vehicle_file = mock_vehicle_db
+    vehicle = Vehicle.from_config(selection=1, config=config)
+    vehicle.veh_override_kg = 12345.0
+    vehicle.set_veh_kg()
+    assert vehicle.veh_kg == 12345.0
+
+
+@pytest.mark.parametrize("ess_scale", [1.0, 2.0])
+def test_set_veh_kg_matches_fastsim(ess_scale):
+    """T3CO's mass must be the mass FASTSim simulates, for every demo vehicle."""
+    fastsim = pytest.importorskip("fastsim")
+    from t3co.constants import Global as gl
+
+    vehicle_file = (
+        gl.RESOURCES_FOLDERPATH / "inputs" / "Demo_FY22_vehicle_model_assumptions.csv"
+    )
+    selections = pd.read_csv(vehicle_file)["selection"]
+    for selection in selections:
+        vehicle = Vehicle.from_csv(selection=selection, vehicle_db_file=vehicle_file)
+        vehicle.ess_max_kwh *= ess_scale
+        vehicle.set_veh_kg()
+
+        fs_vehicle = fastsim.vehicle.Vehicle.from_vehdb(
+            selection, vehicle_file, to_rust=False
+        )
+        fs_vehicle.ess_max_kwh = vehicle.ess_max_kwh
+        fs_vehicle.set_derived()
+        fs_vehicle.set_veh_mass()
+
+        assert vehicle.veh_kg == pytest.approx(fs_vehicle.veh_kg), selection
 
 
 def test_delete_dataframes(config, mock_vehicle_db):

@@ -193,7 +193,8 @@ class VehicleDesignOpt(ElementwiseProblem):
                 problem's own vehicle.
 
         Returns:
-            Vehicle: The modified vehicle; it is changed in place.
+            Vehicle: The modified vehicle, with ``veh_kg`` recomputed for the
+                new component sizes; it is changed in place.
         """
         target_vehicle = self.vehicle if vehicle is None else vehicle
 
@@ -211,6 +212,10 @@ class VehicleDesignOpt(ElementwiseProblem):
             target_vehicle.mc_max_kw = x[3]
         else:
             raise ValueError(f"Unknown vehicle type: {target_vehicle.veh_pt_type}")
+
+        # The component sizes changed, so the mass must follow: the payload
+        # opportunity cost compares it against the GVWR.
+        target_vehicle.set_veh_kg()
 
         return target_vehicle
 
