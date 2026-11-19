@@ -48,6 +48,10 @@ mpgde,Miles Per Gallon Diesel Equivalent [$MPDGE$],Miles per Gallon of Diesel Eq
 kwh_per_mi,Energy Per Distance  [$km/mi$],Energy spent per mile of operation - estimated from drivecycle simulation,float
 payload_cap_cost_multiplier,Lost Payload Capacity Multiplier,Lost payload capacity opportunity cost factor - represents the fractionally extra vehicle required to compensate for reduced payload capacity compared to conventional vehicle - Currently only for Class 8 vehicles ,float
 total_fueling_dwell_time_hr,Fueling/Charging Dwell Time [$hr$],Total dwell time of vehicle due to fueling/charging - used to estimate downtime opportunity cost,float
+total_energy_fueled_enroute_kwh,Enroute Charging Energy [$kWh$],Total energy charged enroute during fueling dwells,float
+total_energy_fueled_offshift_kwh,Off-Shift Charging Energy [$kWh$],Total energy charged off-shift,float
+total_enroute_charging_duration_hr,Enroute Charging Duration [$hr$],Total time spent charging enroute at the maximum charging power,float
+total_offshift_charging_duration_hr,Off-Shift Charging Duration [$hr$],Total time spent charging off-shift at the maximum charging power,float
 total_mr_downtime_hr,Maintenance Downtime [$hr$],"Total dwell time of vehicle due to maintenance & repair (planned, unplanned, and tire replacement) - used to estimate downtime opportunity cost",float
 total_downtime_hr,Total Downtime [$hr$],Total downtime due to fueling/charging and maintenance events,float
 msrp_total_dol,MSRP [\$],Estimated manufacturer's suggested retail price in dollars - calculated from vehicle component costs,float
@@ -66,6 +70,8 @@ total_purchasing_payment_dol,Loan/Lease Payments [\$],"Estimated discounted sum 
 insurance_cost_dol,Insurance Cost [\$],Estimated insurance cost of vehicle in dollars - estimated from MSRP and scenario.insurance_rates_pct_per_yr,float
 total_maintenance_cost_dol,Maintenance Operating Cost  [\$],Estimated maintenance operating cost in dollars - calculated from VMT and scenario.maint_oper_cost_dol_per_mi,float
 total_fuel_cost_dol,Fuel Operating Cost  [\$],Estimated fuel operating cost in dollars - calculated from energy consumption and fuel prices,float
+total_enroute_fuel_cost_dol,Enroute Charging Cost  [\$],"Estimated discounted cost of electricity charged enroute, during fueling dwells - part of fuel operating cost",float
+total_offshift_fuel_cost_dol,Off-Shift Charging Cost  [\$],"Estimated discounted cost of electricity charged off-shift, for example at the depot - part of fuel operating cost",float
 fueling_dwell_labor_cost_dol,Fueling/Charging Dwell Labor Cost [\$],Estimated labor cost incurred during fueling/charging dwell time,float
 discounted_downtime_oppy_cost_dol,Discounted Total Downtime Opportunity Cost [\$],Estimated discounted opportunity cost for both fueling dwell time and M&R downtime in dollars - estimation is based on config.TCO_method,float
 payload_capacity_cost_dol,Lost Payload Capacity Opportunity Cost [\$],Lost payload capacity opportunity cost in dollars - estimated from payload_cap_cost_multiplier and estimated tco,float

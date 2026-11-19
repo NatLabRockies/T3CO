@@ -209,6 +209,29 @@ def test_purchasing_payments_reconcile_operating_cost(
     )
 
 
+def test_enroute_and_offshift_charging_totals(vehicle, scenario, energy, config):
+    vehicle.max_soc = 0.95
+    vehicle.min_soc = 0.05
+    scenario.fuel_prices_df.loc["enroute_electricity_dol_per_kwh"] = [
+        "US",
+        *[0.3] * 10,
+    ]
+    ledger = Ledger(vehicle=vehicle, scenario=scenario, energy=energy, config=config)
+
+    assert ledger.total_energy_fueled_enroute_kwh > 0
+    assert (
+        ledger.total_energy_fueled_enroute_kwh + ledger.total_energy_fueled_offshift_kwh
+        == pytest.approx(ledger.total_energy_used_kwh)
+    )
+    assert (
+        ledger.total_enroute_fuel_cost_dol + ledger.total_offshift_fuel_cost_dol
+        == pytest.approx(ledger.total_fuel_cost_dol)
+    )
+    assert ledger.total_enroute_charging_duration_hr == pytest.approx(
+        ledger.total_energy_fueled_enroute_kwh / scenario.ess_max_charging_power_kw
+    )
+
+
 def test_set_cost_components(vehicle, scenario, energy, config, ledger):
     # ledger = Ledger.__new__(vehicle=vehicle, scenario=scenario, energy=energy, config=config)
     ledger.set_cost_components()

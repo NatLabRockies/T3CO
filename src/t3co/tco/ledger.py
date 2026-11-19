@@ -49,6 +49,8 @@ class Ledger:
     residual_cost_dol: float = 0.0
 
     total_fuel_cost_dol: float = 0.0
+    total_enroute_fuel_cost_dol: float = 0.0
+    total_offshift_fuel_cost_dol: float = 0.0
     total_maintenance_cost_dol: float = 0.0
     total_purchasing_cost_dol: float = 0.0
     total_purchasing_payment_dol: float = 0.0
@@ -63,6 +65,10 @@ class Ledger:
     total_fuel_used_gal_ge: float = 0.0
     total_fuel_used_gal_de: float = 0.0
     total_energy_used_kwh: float = 0.0
+    total_energy_fueled_enroute_kwh: float = 0.0
+    total_energy_fueled_offshift_kwh: float = 0.0
+    total_enroute_charging_duration_hr: float = 0.0
+    total_offshift_charging_duration_hr: float = 0.0
     mpgge: float = 0.0
     grid_mpgge: float = 0.0
     mpgde: float = 0.0
@@ -200,6 +206,26 @@ class Ledger:
         self.total_fuel_cost_dol = sum(
             self.scenario.get_discounted_value(
                 self.tco_per_year[year_index].oper_costs_dol.fuel_cost_dol_per_yr,
+                year_number=year_index + 1,
+            )
+            for year_index in range(self.vehicle_life_yr)
+        )
+        # Enroute and off-shift shares of total_fuel_cost_dol, discounted the
+        # same way; both are zero for non-electric fuels.
+        self.total_enroute_fuel_cost_dol = sum(
+            self.scenario.get_discounted_value(
+                self.tco_per_year[
+                    year_index
+                ].oper_costs_dol.enroute_fuel_cost_dol_per_yr,
+                year_number=year_index + 1,
+            )
+            for year_index in range(self.vehicle_life_yr)
+        )
+        self.total_offshift_fuel_cost_dol = sum(
+            self.scenario.get_discounted_value(
+                self.tco_per_year[
+                    year_index
+                ].oper_costs_dol.offshift_fuel_cost_dol_per_yr,
                 year_number=year_index + 1,
             )
             for year_index in range(self.vehicle_life_yr)
@@ -377,6 +403,27 @@ class Ledger:
 
         self.total_fuel_used_gal_de = self.total_fuel_used_gal_ge / gl.DGE_TO_GGE
         self.total_energy_used_kwh = self.total_fuel_used_gal_ge * gl.KWH_PER_GGE
+
+        oper_costs_per_year = [
+            self.tco_per_year[year_index].oper_costs_dol
+            for year_index in range(self.vehicle_life_yr)
+        ]
+        self.total_energy_fueled_enroute_kwh = sum(
+            oper_costs.energy_fueled_enroute_kwh_per_yr
+            for oper_costs in oper_costs_per_year
+        )
+        self.total_energy_fueled_offshift_kwh = sum(
+            oper_costs.energy_fueled_offshift_kwh_per_yr
+            for oper_costs in oper_costs_per_year
+        )
+        self.total_enroute_charging_duration_hr = sum(
+            oper_costs.enroute_charging_duration_hr_per_yr
+            for oper_costs in oper_costs_per_year
+        )
+        self.total_offshift_charging_duration_hr = sum(
+            oper_costs.offshift_charging_duration_hr_per_yr
+            for oper_costs in oper_costs_per_year
+        )
 
         self.mpgge = self.energy.mpgge
         self.grid_mpgge = (
