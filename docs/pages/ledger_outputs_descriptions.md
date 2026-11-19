@@ -87,7 +87,7 @@
             <td>OperatingCosts</td>
             <td>Discounted Total Operating Costs</td>
             <td>$</td>
-            <td>Discounted Total Operating Costs in dollars - Sum of discounted values of   fuel expense, maintenance, insurance, purchasing, and fueling dwell labor</td>
+            <td>Discounted Total Operating Costs in dollars - Sum of discounted values of   fuel expense, maintenance, insurance, registration fees, purchasing, and fueling dwell labor</td>
             <td>float</td>
         </tr>
         <tr>
@@ -264,6 +264,14 @@
             <td>Insurance Cost</td>
             <td>$</td>
             <td>Estimated insurance cost of vehicle in dollars - estimated from MSRP and   scenario.insurance_rates_pct_per_yr</td>
+            <td>float</td>
+        </tr>
+        <tr>
+            <td>registration_fees_dol</td>
+            <td>OperatingCosts</td>
+            <td>Registration Fees</td>
+            <td>$</td>
+            <td>Estimated discounted sum of annual registration fees in dollars - from scenario.registration_fees_dol_per_yr, or from the registration fee table and federal heavy vehicle use tax when scenario.registration_state is set</td>
             <td>float</td>
         </tr>
         <tr>

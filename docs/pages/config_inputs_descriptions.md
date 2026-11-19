@@ -327,6 +327,13 @@
             <td>string</td>
         </tr>
         <tr>
+            <td>registration_fees_file</td>
+            <td>Registration Fees Filepath</td>
+            <td></td>
+            <td>Optional filepath to a registration fee table, either absolute or relative to the Config file. Overrides the scenario registration_fees_file for every scenario. If left blank, the packaged ./auxiliary/RegistrationFees.csv is used</td>
+            <td>string</td>
+        </tr>
+        <tr>
             <td>region</td>
             <td>Fuel Price Region or Zipcode</td>
             <td></td>
