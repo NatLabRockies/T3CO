@@ -4,6 +4,8 @@
 
 T3CO 2.1 refines the residual-value model, adds visualization and results-summary modules, and makes vehicle optimization faster, reproducible, and available in batch mode.
 
+Install it with `pip install t3co==2.1.1`. 2.1.1 is the first 2.1 release on PyPI: 2.1.0 was tagged on GitHub but never uploaded. The two have the same code; 2.1.1 only fixes a link in the README, which is the PyPI project description.
+
 ### Refined residual-value model — TCO results change
 
 The residual-value model computes a vehicle's residual as the product of (1 − depreciation rate) over each year of its life. For a vehicle with a 4-year life depreciating 9% a year, the residual value is 0.91⁴ = 68.6% of MSRP. Residual value is credited against cost, so this refinement lowers total cost of ownership, and it applies to every design the optimizer evaluates as well as to direct TCO runs.
