@@ -192,18 +192,26 @@ def test_purchasing_payments_reconcile_operating_cost(
     scenario.purchasing_payment_frequency_months = 1
     scenario.purchasing_term_yr = 4
     scenario.leasing_money_factor = 0.002
+    scenario.registration_fees_dol_per_yr = [500.0] * 10
     ledger = Ledger(vehicle=vehicle, scenario=scenario, energy=energy, config=config)
 
     if method == "cash":
         assert ledger.total_purchasing_payment_dol == 0
     else:
         assert ledger.total_purchasing_payment_dol > 0
+    assert ledger.registration_fees_dol == pytest.approx(
+        sum(
+            scenario.get_discounted_value(500.0, year_number=year)
+            for year in range(1, 11)
+        )
+    )
     # With the full payments included, the exported discounted operating
     # components add up to the operating total counted in TCO.
     assert ledger.discounted_total_oper_cost_dol == pytest.approx(
         ledger.total_fuel_cost_dol
         + ledger.total_maintenance_cost_dol
         + ledger.insurance_cost_dol
+        + ledger.registration_fees_dol
         + ledger.fueling_dwell_labor_cost_dol
         + ledger.total_purchasing_payment_dol
     )

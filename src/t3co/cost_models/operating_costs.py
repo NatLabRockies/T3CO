@@ -5,6 +5,12 @@ import pandas as pd
 from t3co.constants import Global as gl
 from t3co.cost_models.capital_costs import CapitalCosts
 from t3co.cost_models.opportunity_costs import OpportunityCosts
+from t3co.cost_models.registration_fees import (
+    get_powertrain_code,
+    get_state_registration_fee_dol_per_yr,
+    hvut_dol_per_yr,
+    load_registration_fees,
+)
 from t3co.energy_models.energy import Energy
 from t3co.input_data.scenario import Scenario
 from t3co.input_data.vehicle import Vehicle
@@ -20,6 +26,7 @@ class OperatingCosts:
     maintenance_cost_dol_per_yr: float = 0.0
     maintenance_cost_dol_per_mi: float = 0.0
     insurance_cost_dol_per_yr: float = 0.0
+    registration_fees_dol_per_yr: float = 0.0
     distance_traveled_mi_per_yr: float = 0.0
     purchasing_payment_dol_per_yr: float = 0.0
     purchasing_tax_amount_dol_per_year: float = 0.0
@@ -74,6 +81,10 @@ class OperatingCosts:
                 cap_cost=cap_costs,
                 vehicle=vehicle,
                 scenario=scenario,
+            )
+        if scenario.cost_toggles.registration_fees:
+            self.set_registration_fees(
+                year_number=year_number, vehicle=vehicle, scenario=scenario
             )
         if scenario.cost_toggles.fueling_dwell_labor:
             if scenario.activate_tco_fueling_dwell_time_cost and oppy_costs:
@@ -246,6 +257,64 @@ class OperatingCosts:
             cap_cost.msrp_total_dol * self.insurance_rates_pct_per_yr
         )
 
+    def set_registration_fees(
+        self, year_number: int, vehicle: Vehicle, scenario: Scenario
+    ) -> None:
+        """
+        Sets the annual registration fees for the given year.
+
+        If the scenario gives registration_fees_dol_per_yr, that value is used as the
+        whole annual fee. Otherwise, if it gives registration_state, the fee is the
+        state's base fee and powertrain surcharge from the registration fee table plus
+        the federal heavy vehicle use tax. With neither, the fee is zero.
+
+        Inputs from scenario:
+        - registration_fees_dol_per_yr
+        - registration_state
+        - registration_fees_file
+        - gvwr_kg
+        - gvwr_credit_kg
+        - fuel_type
+
+        Inputs from vehicle:
+        - veh_pt_type
+
+        Estimated class variables:
+        - registration_fees_dol_per_yr
+
+        Args:
+            year_number (int): The year number for which the registration fees are calculated.
+            vehicle (Vehicle): The vehicle instance.
+            scenario (Scenario): The scenario instance containing configuration data.
+        """
+        registration_fees = scenario.registration_fees_dol_per_yr
+        if isinstance(registration_fees, str):
+            registration_fees = ast.literal_eval(registration_fees)
+
+        if registration_fees is not None:
+            self.registration_fees_dol_per_yr = (
+                registration_fees[year_number - 1]
+                if isinstance(registration_fees, (list, tuple))
+                else registration_fees
+            )
+        elif scenario.registration_state:
+            # Registered at the GVWR plus any alternative fuel weight allowance,
+            # matching the loaded weight used in the energy calculations.
+            gross_weight_lb = gl.kg_to_lbs(scenario.gvwr_kg + scenario.gvwr_credit_kg)
+            self.registration_fees_dol_per_yr = get_state_registration_fee_dol_per_yr(
+                state=scenario.registration_state,
+                powertrain=get_powertrain_code(vehicle.veh_pt_type, scenario.fuel_type),
+                gross_weight_lb=gross_weight_lb,
+                registration_fees_df=load_registration_fees(
+                    scenario.registration_fees_file
+                ),
+            ) + hvut_dol_per_yr(
+                gross_weight_lb=gross_weight_lb,
+                distance_mi_per_yr=self.distance_traveled_mi_per_yr,
+            )
+        else:
+            self.registration_fees_dol_per_yr = 0.0
+
     def set_purchasing_payment_cost(
         self, year_number: int, scenario: Scenario, cap_costs: CapitalCosts
     ):
@@ -410,6 +479,7 @@ class OperatingCosts:
         - fueling_dwell_labor_cost_dol_per_yr
         - maintenance_cost_dol_per_yr
         - insurance_cost_dol_per_yr
+        - registration_fees_dol_per_yr
         - purchasing_payment_dol_per_yr
 
         Estimated OperatingCosts variables:
@@ -420,6 +490,7 @@ class OperatingCosts:
             + self.fueling_dwell_labor_cost_dol_per_yr
             + self.maintenance_cost_dol_per_yr
             + self.insurance_cost_dol_per_yr
+            + self.registration_fees_dol_per_yr
             + self.purchasing_payment_dol_per_yr
         )
 

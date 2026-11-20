@@ -14,6 +14,7 @@
         "eia_fuel_prices": true,
         "maintenance_oper_cost": true,
         "insurance_cost": true,
+        "registration_fees": true,
         "purchasing_cost": true,
         "fueling_dwell_labor": true
     },
