@@ -54,6 +54,5 @@ When a US zipcode is provided in the Config or Scenario `region` field, T3CO can
 - Labor Cost as an operating cost component
 - Grants incentives, title, and other recurring fees added as Capital and Operating Cost components
 - Battery replacement and battery degradation accounted for in Operating Costs and Energy calculations
-- Registration fee table covering all 50 states and DC
 - Regionalized labor cost inputs
 - Option to run RouteE for Energy calculations
