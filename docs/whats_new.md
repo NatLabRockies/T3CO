@@ -1,5 +1,16 @@
 # What's New in T3CO
 
+## Unreleased
+
+### Registration fees
+
+Annual registration fees are now an operating cost, reported as `registration_fees_dol` in the Ledger and discounted year by year like insurance. A scenario provides them in one of two ways:
+
+- `registration_fees_dol_per_yr`: the total annual fee, as one value or one value per year.
+- `registration_state`: a two-letter state code. T3CO adds the state's base fee for the vehicle's registered weight, its surcharge for the vehicle's powertrain (battery electric, plug-in hybrid, hybrid, fuel cell, or CNG), and the federal heavy vehicle use tax (IRS Form 2290). State fees come from the new `auxiliary/RegistrationFees.csv`, where every row cites its source; a Config `registration_fees_file` can point to a different table.
+
+Scenarios that set neither get no registration fees, so existing results are unchanged. The `registration_fees` toggle in `cost_toggles.json` turns the cost off. `tax_rate_pct` remains for one-time taxes at purchase.
+
 ## T3CO 2.1
 
 T3CO 2.1 refines the residual-value model, adds visualization and results-summary modules, and makes vehicle optimization faster, reproducible, and available in batch mode.

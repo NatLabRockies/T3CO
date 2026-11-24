@@ -68,6 +68,7 @@ class T3COCharts:
         "purchasing_downpayment_dol": "#008080",
         "total_purchasing_payment_dol": "#FF7F0E",
         "insurance_cost_dol": "#CDC673",
+        "registration_fees_dol": "#9370DB",
         "total_maintenance_cost_dol": "#DAA520",
         "total_fuel_cost_dol": "#4682B4",
         "fueling_dwell_labor_cost_dol": "#CD2626",

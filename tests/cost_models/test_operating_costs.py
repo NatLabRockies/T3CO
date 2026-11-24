@@ -399,3 +399,90 @@ def test_set_fuel_cost_zero_mpgge(vehicle, scenario):
 
     operating_costs.set_fuel_cost(year_number=1, vehicle=vehicle, scenario=scenario)
     assert operating_costs.fuel_cost_dol_per_yr == 0.0
+
+
+def _registration_fees_file(tmp_path):
+    fees_file = tmp_path / "RegistrationFees.csv"
+    pd.DataFrame(
+        {
+            "state": ["ZZ", "ZZ", "ZZ"],
+            "component": ["base", "base", "surcharge"],
+            "powertrain": ["ALL", "ALL", "BEV"],
+            "min_gvwr_lb": [8501, 26001, 8501],
+            "max_gvwr_lb": [26000, None, None],
+            "fee_dol_per_yr": [200.0, 1500.0, 150.0],
+            "effective_year": [2025, 2025, 2025],
+            "source_url": ["https://example.gov/fees"] * 3,
+            "notes": [""] * 3,
+        }
+    ).to_csv(fees_file, index=False)
+    return fees_file
+
+
+def _registration_fees(vehicle, scenario, year_number=1):
+    operating_costs = OperatingCosts.__new__(OperatingCosts)
+    operating_costs.distance_traveled_mi_per_yr = scenario.vmt[year_number - 1]
+    operating_costs.set_registration_fees(
+        year_number=year_number, vehicle=vehicle, scenario=scenario
+    )
+    return operating_costs.registration_fees_dol_per_yr
+
+
+def test_registration_fees_zero_without_inputs(vehicle, scenario):
+    assert _registration_fees(vehicle, scenario) == 0.0
+
+
+@pytest.mark.parametrize(
+    "registration_fees, year_number, expected",
+    [(750.0, 3, 750.0), ([500.0, 600.0, 700.0], 2, 600.0), ("[500.0, 600.0]", 1, 500.0)],
+)
+def test_registration_fees_from_scenario_value(
+    vehicle, scenario, registration_fees, year_number, expected
+):
+    scenario.registration_fees_dol_per_yr = registration_fees
+    # A given value takes priority over the state lookup.
+    scenario.registration_state = "ZZ"
+    assert _registration_fees(vehicle, scenario, year_number) == expected
+
+
+def test_registration_fees_from_state_lookup(vehicle, scenario, tmp_path):
+    scenario.registration_fees_file = _registration_fees_file(tmp_path)
+    scenario.registration_state = "ZZ"
+    # 36,000 kg GVWR plus a 287 kg allowance is about 80,000 lb: base fee,
+    # BEV surcharge, and the top HVUT rate.
+    scenario.gvwr_kg = 36_000.0
+    scenario.gvwr_credit_kg = 287.0
+    assert _registration_fees(vehicle, scenario) == pytest.approx(1500.0 + 150.0 + 550.0)
+
+    # Low annual mileage exempts the vehicle from HVUT.
+    scenario.vmt = [4_000] * 10
+    assert _registration_fees(vehicle, scenario) == pytest.approx(1500.0 + 150.0)
+
+
+def test_registration_fees_counted_in_net_oper_cost(
+    vehicle, scenario, energy, cap_costs, oppy_costs
+):
+    scenario.fuel_prices_df.set_index("Fuel", inplace=True)
+    scenario.registration_fees_dol_per_yr = [1000.0] * 10
+    operating_costs = OperatingCosts(
+        year_number=1,
+        cap_costs=cap_costs,
+        vehicle=vehicle,
+        scenario=scenario,
+        energy=energy,
+        oppy_costs=oppy_costs,
+    )
+    assert operating_costs.registration_fees_dol_per_yr == 1000.0
+    assert operating_costs.net_oper_cost_dol_per_yr == pytest.approx(21233.33, 0.01)
+
+    scenario.cost_toggles.registration_fees = False
+    operating_costs = OperatingCosts(
+        year_number=1,
+        cap_costs=cap_costs,
+        vehicle=vehicle,
+        scenario=scenario,
+        energy=energy,
+        oppy_costs=oppy_costs,
+    )
+    assert operating_costs.registration_fees_dol_per_yr == 0.0
+    assert operating_costs.net_oper_cost_dol_per_yr == pytest.approx(20233.33, 0.01)

@@ -15,6 +15,7 @@
 - *Maintenance Cost*
 - *Purchasing Cost:* Recurring payments for loan or lease purchasing method
 - *Insurance Cost*
+- *Registration Fees:* Annual fees, either given per scenario or looked up by state: the state's base fee for the vehicle's weight, its surcharge for the vehicle's powertrain, and the federal heavy vehicle use tax
 - *Fueling Dwell Labor cost*
 - All operating costs are discounted year over year to account for time value of money
 
@@ -51,7 +52,7 @@ When a US zipcode is provided in the Config or Scenario `region` field, T3CO can
 ## Features Roadmap
 
 - Labor Cost as an operating cost component
-- Grants incentives, registration, title, and recurring fees added as Capital and Operating Cost components
+- Grants incentives, title, and other recurring fees added as Capital and Operating Cost components
 - Battery replacement and battery degradation accounted for in Operating Costs and Energy calculations
-- Regionalized registration and labor cost inputs
+- Regionalized labor cost inputs
 - Option to run RouteE for Energy calculations

@@ -130,6 +130,10 @@ class Scenario(object):
 
     fuel_prices_dol_per_gge: List[float] = field(default_factory=float)
     insurance_rates_pct_per_yr: List[float] = field(default_factory=float)
+    # User-supplied annual registration fees. When set, they replace the
+    # registration_state lookup.
+    registration_fees_dol_per_yr: List[float] = None
+    registration_state: str = ""
 
     depreciation_rates_pct_per_yr: List[float] = field(default_factory=float)
     residual_rate_pct: float = 1.0
@@ -142,6 +146,7 @@ class Scenario(object):
 
     fuel_prices_file: str = "./auxiliary/FuelPrices.csv"
     fuel_prices_df: pd.DataFrame = None
+    registration_fees_file: str = "./auxiliary/RegistrationFees.csv"
     plf_weight_distribution_file: str = "./auxiliary/tractorweightvars.csv"
 
     avg_speed_mph: float = 0.0
@@ -276,6 +281,14 @@ class Scenario(object):
         scenario_dict["maint_oper_cost_dol_per_mi"] = _parse_life_year_series(
             "maint_oper_cost_dol_per_mi", -1.0
         )
+        # A blank registration fee means "not given", so keep it as None
+        # instead of filling a series of zeros.
+        if handle_nan(scenario_dict.get("registration_fees_dol_per_yr")) in (None, ""):
+            scenario_dict["registration_fees_dol_per_yr"] = None
+        else:
+            scenario_dict["registration_fees_dol_per_yr"] = _parse_life_year_series(
+                "registration_fees_dol_per_yr", 0.0
+            )
 
         return cls(**handle_nan(scenario_dict))
 
@@ -347,6 +360,8 @@ class Scenario(object):
         self.insurance_rates_file = config.insurance_rates_file
         self.fuel_prices_file = config.fuel_prices_file
         self.fuel_prices_df = config.fuel_prices_df
+        if config.registration_fees_file:
+            self.registration_fees_file = config.registration_fees_file
         if config.fuel_prices_region:
             self.region = config.fuel_prices_region
 

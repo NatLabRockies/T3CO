@@ -696,6 +696,33 @@
             <td>string</td>
         </tr>
         <tr>
+            <td>registration_fees_dol_per_yr</td>
+            <td>Registration Fees per Year</td>
+            <td>$/yr</td>
+            <td>Optional. Total annual registration fees, as one value or a vector with length equal to number of TCO years. When given, it is used as-is and replaces the registration_state lookup, so include the federal heavy vehicle use tax in it where it applies. Leave blank to use registration_state.</td>
+            <td>Conv, BEV, HEV, FCEV</td>
+            <td>OperatingCosts: Registration Fees</td>
+            <td>float or list[float]</td>
+        </tr>
+        <tr>
+            <td>registration_fees_file</td>
+            <td>Registration Fees Filepath</td>
+            <td></td>
+            <td>Filepath of RegistrationFees.csv either as an absolute path or relative to the resources folder path. Defaults to the packaged ./auxiliary/RegistrationFees.csv</td>
+            <td>Conv, BEV, HEV, FCEV</td>
+            <td>OperatingCosts: Registration Fees</td>
+            <td>string</td>
+        </tr>
+        <tr>
+            <td>registration_state</td>
+            <td>Registration State</td>
+            <td></td>
+            <td>Optional. Two-letter code of the state where the vehicle is registered (e.g. WA). When set and registration_fees_dol_per_yr is blank, the annual fee is the state's base fee for the registered weight (gvwr_kg + gvwr_credit_kg) plus its surcharge for the vehicle's powertrain from RegistrationFees.csv, plus the federal heavy vehicle use tax. The tax is waived in years with 5,000 miles or less of VMT. Leave blank for no registration fees.</td>
+            <td>Conv, BEV, HEV, FCEV</td>
+            <td>OperatingCosts: Registration Fees</td>
+            <td>string</td>
+        </tr>
+        <tr>
             <td>scenario_name</td>
             <td>Scenario Name</td>
             <td></td>
@@ -762,7 +789,7 @@
             <td>tax_rate_pct</td>
             <td>Tax Rate</td>
             <td>%</td>
-            <td>Registration and other taxes during time of purchase as percent on the MSRP (eg., 0.125 means 12.5% of MSRP)</td>
+            <td>One-time sales, excise and other taxes at the time of purchase as percent on the MSRP (eg., 0.125 means 12.5% of MSRP). Annual registration fees are a separate operating cost (see registration_fees_dol_per_yr and registration_state)</td>
             <td>Conv, BEV, HEV, FCEV</td>
             <td>CapitalCosts: Purchase Tax</td>
             <td>float</td>
